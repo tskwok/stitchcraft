@@ -563,7 +563,7 @@ $("#impFile").addEventListener("change",function(e){
 });
 
 /* production specific measurement builder */
-var CTYPES=[["measure","Measurement (in / cm)"],["number","Number"],["text","Text"],["dropdown","Dropdown List"],["yesno","Yes / No"]];
+var CTYPES=[["measure","Type"],["number","Number"],["text","Text"],["dropdown","Dropdown List"],["yesno","Yes / No"]];
 function renderFields(){
   var l=$("#fList"),f=curProd.fields;
   if(!f.length){l.innerHTML='<p class="hint">Nothing added yet.</p>';return}

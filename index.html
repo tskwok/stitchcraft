@@ -778,6 +778,13 @@ $("#vCast").addEventListener("change",function(e){
   if(inBody)$("#bodyMsg").textContent="Measurements must be positive numbers greater than 0.";
   else msg("That number can\u2019t be negative, so it was cleared.");
 });
+/* Hat is a text box (it takes "7 1/4" or "M"), so its positive-only rule is checked separately when the field is left */
+$('[data-k="hat"]').addEventListener("change",function(){
+  var v=this.value.trim();
+  if(v&&(/^[-−]/.test(v)||(/^[\d.\s\/]+$/.test(v)&&!(parseFloat(v)>0)))){
+    this.value="";msg("Hat size must be a positive number, so it was cleared.");
+  }
+});
 $("#hFt").addEventListener("input",joinH);
 $("#hIn").addEventListener("input",joinH);
 

@@ -22,7 +22,7 @@ Open it in a browser to run it. Originally published as a claude.ai artifact.
 - The artifact `downloads` capability saves the PDF when hosted on claude.ai; outside it, the code falls back to `doc.save()`.
 
 ## Rules to keep
-- Body Measurements inputs (`#body`) are positive decimals only. Shoulder-to-Wrist is calculated. Other measurement inputs reject negatives. Validate on `change`, not on each keystroke.
+- Body Measurements inputs (`#body`) are positive decimals only. Shoulder-to-Wrist is calculated. Other measurement inputs reject negatives. Hat is a text box (fractions and letter sizes allowed) that rejects negative and zero numbers. Validate on `change`, not on each keystroke.
 - Field names use Title Case (custom names are converted by `titleCase()` when the field is left). Run end date must not be before start.
 - Keep it a single file with light/dark theme CSS variables.
 - Labels wrap; never shrink label text to fit. Tap targets stay at about 40px.

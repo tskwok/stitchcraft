@@ -215,6 +215,7 @@ textarea.s{min-height:76px}
 <div id="vCast" class="view" hidden>
   <div class="crumb"><button type="button" class="link" id="bProd">← Back to production</button></div>
   <h2 class="vt" id="cCrumb" data-vf tabindex="-1"></h2>
+  <p class="hint" id="asState" role="status" style="margin:-6px 0 12px"></p>
 
   <section>
     <div class="row">
@@ -759,8 +760,8 @@ function joinH(){
   if(isNaN(f)&&isNaN(i)){h.value="";return}
   h.value=Math.round(((f||0)*12+(i||0))*10)/10;
 }
-$("#uIn").onclick=function(){setUnit("in",true)};
-$("#uCm").onclick=function(){setUnit("cm",true)};
+$("#uIn").onclick=function(){setUnit("in",true);scheduleSave()};
+$("#uCm").onclick=function(){setUnit("cm",true);scheduleSave()};
 $('[data-k="napeShoulder"]').addEventListener("input",calc);
 $('[data-k="napeWrist"]').addEventListener("input",calc);
 ["napeWaist","waistFloor"].forEach(function(k){
@@ -814,7 +815,7 @@ function showPhoto(){
   $("#photoBtn").textContent=v?"Change Picture":"Add Profile Picture";
 }
 $("#photoBtn").onclick=function(){$("#photoFile").click()};
-$("#photoDel").onclick=function(){$('[data-k="photo"]').value="";$("#photoFile").value="";showPhoto()};
+$("#photoDel").onclick=function(){$('[data-k="photo"]').value="";$("#photoFile").value="";showPhoto();scheduleSave()};
 $("#photoFile").addEventListener("change",function(e){
   var f=e.target.files&&e.target.files[0];if(!f)return;
   var fr=new FileReader();
@@ -824,7 +825,7 @@ $("#photoFile").addEventListener("change",function(e){
       var s=Math.min(img.width,img.height),c=document.createElement("canvas");
       c.width=c.height=300;
       c.getContext("2d").drawImage(img,(img.width-s)/2,(img.height-s)/2,s,s,0,0,300,300);
-      $('[data-k="photo"]').value=c.toDataURL("image/jpeg",0.8);
+      $('[data-k="photo"]').value=c.toDataURL("image/jpeg",0.8);setTimeout(scheduleSave,0);
       showPhoto();
     };
     img.onerror=function(){msg("Couldn’t read that image.")};
@@ -907,23 +908,57 @@ function fill(o){
 var savedSnap="";
 function snap(){savedSnap=JSON.stringify(read())}
 function dirty(){return !!curProd&&!$("#vCast").hidden&&JSON.stringify(read())!==savedSnap}
-window.addEventListener("beforeunload",function(e){if(dirty()){e.preventDefault();e.returnValue=""}});
+/* Auto save: the cast form saves itself shortly after each change, as long as it has a name. */
+var asT=0;
+function asState(t){$("#asState").textContent=t}
+function hasName(){return !!$('[data-k="name"]').value.trim()}
+function updateAsState(){
+  if($("#vCast").hidden)return;
+  asState(hasName()?(dirty()?"Saving…":"Changes save automatically."):"Enter a name and this cast member will save automatically.");
+}
+/* saves now if there is something to save; false when it could not be saved */
+function flushSave(){
+  clearTimeout(asT);
+  if(!curProd||$("#vCast").hidden||!dirty())return true;
+  if(!hasName())return false;
+  return saveCast(true);
+}
+function scheduleSave(){
+  if(!curProd||$("#vCast").hidden)return;
+  clearTimeout(asT);
+  updateAsState();
+  if(hasName()&&dirty())asT=setTimeout(flushSave,800);
+}
+$("#vCast").addEventListener("input",scheduleSave);
+$("#vCast").addEventListener("change",function(){flushSave();updateAsState()});
+document.addEventListener("visibilitychange",function(){if(document.hidden)flushSave()});
+window.addEventListener("pagehide",flushSave);
+window.addEventListener("beforeunload",function(e){
+  if(hasName())flushSave();
+  if(dirty()){e.preventDefault();e.returnValue=""}
+});
 function openCast(id){
   var r=id?db.members.filter(function(x){return x.id===id})[0]:null;
   $("#cCrumb").textContent=(curProd.name||"Untitled production")+" · "+(r?"Cast member":"New cast member");
   fill(r||{unit:lastUnit});
   show("vCast");
   snap();
+  updateAsState();
 }
 $("#bProd").onclick=function(){
   if(!dirty()){renderCast();show("vProd");return}
-  ask("This cast member has changes that haven\u2019t been saved. Leave and lose them?","Leave Without Saving").then(function(ok){
+  if(hasName()){if(flushSave()){renderCast();show("vProd")}return}
+  ask("This cast member has no name yet, so it can\u2019t be saved. Leave and lose what you entered?","Leave Without Saving").then(function(ok){
     if(ok){renderCast();show("vProd")}
   });
 };
-function saveCast(){
+function saveCast(quiet){
+  clearTimeout(asT);
   var r=read();
-  if(!r.name.trim()){msg("Please enter a name first.");$('[data-k="name"]').focus();return false}
+  if(!r.name.trim()){
+    if(quiet)return false;
+    msg("Please enter a name first.");$('[data-k="name"]').focus();return false;
+  }
   var isNew=!r.id,before=db.members.slice();
   if(isNew)r.id=curId=uid();
   var i=db.members.findIndex(function(x){return x.id===r.id});
@@ -931,18 +966,20 @@ function saveCast(){
   if(!saveDB()){
     /* undo, so the list never shows something that isn't really stored */
     db.members=before;if(isNew)curId=null;
+    asState("Couldn\u2019t save.");
     msg("Couldn\u2019t save: this browser\u2019s storage is full or blocked. Removing the profile picture may help.");
     return false;
   }
   lastUnit=r.unit;
   snap();
-  msg("Saved \u2713");
+  if(!quiet)msg("Saved \u2713");
+  asState("Saved \u2713");
   return true;
 }
-$("#save").onclick=saveCast;
+$("#save").onclick=function(){saveCast()};
 $("#saveNew").onclick=function(){
   if(!saveCast())return;
-  fill({unit:lastUnit});snap();
+  fill({unit:lastUnit});snap();updateAsState();
   $("#cCrumb").textContent=(curProd.name||"Untitled production")+" · New cast member";
   window.scrollTo(0,0);$("#cCrumb").focus({preventScroll:true});msg("Saved. Ready for the next cast member.");
 };

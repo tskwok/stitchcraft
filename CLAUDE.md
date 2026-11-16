@@ -14,7 +14,7 @@ Open it in a browser to run it. Originally published as a claude.ai artifact.
 
 ## Key code (search for these)
 - Storage: `loadDB/saveDB/normProd`
-- Cast form: `read()/fill()/saveCast()`, `setUnit/calc/footCalc`, `wrapLabels` (runs once; wraps label text in `.lt`), unsaved-changes guard `snap()/dirty()`
+- Cast form: `read()/fill()/saveCast()`, `setUnit/calc/footCalc`, `wrapLabels` (runs once; wraps label text in `.lt`), auto save `scheduleSave()/flushSave()` (saves 0.8 s after a change, on field change, on leaving the page and on the back button, once the cast member has a name) with `snap()/dirty()` tracking what is saved; `#asState` shows the status
 - Number validation: one `change` handler on `#vCast` for inputs with `min="0"` (`isMeasure`)
 - Measurement guide ("i" buttons): `GSVG`/`GTXT` arrays (index = position in `BODY`, or the entry's third element; 14 = Shoulder To Wrist, 15 = Waist To Floor) + base64 silhouette masks in CSS (`.sF`, `.sM`)
 - Import / export (bottom bar of `#vProd`): `#pExp` writes `{app:"stitchcraft",version,productions:[one],members}` as JSON via `saveFile()`; `importData()` copies productions in with fresh ids, text-only values and `data:image` pictures only.

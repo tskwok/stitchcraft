@@ -660,6 +660,8 @@ BF.shoulderWrist='<label class="hasi">Sleeve: Shoulder To Wrist (<span class="u"
 });
 $$(".sz").forEach(function(s){s.innerHTML='<option value="">Select…</option>'+SIZES.map(function(x){return"<option>"+x+"</option>"}).join("")});
 
+/* Pant Size also offers the even numeric sizes 28 to 44, listed after the letter sizes */
+(function(){var s=$('[data-k="pantSize"]');for(var n=28;n<=44;n+=2)s.insertAdjacentHTML("beforeend","<option>"+n+"</option>")})();
 /* Shoe Carnival size chart: US size -> foot length (in). Men's 15 is left out: the chart lists it shorter than size 14. */
 var FOOT={
 W:{4:8.188,4.5:8.375,5:8.563,5.5:8.75,6:8.875,6.5:9.063,7:9.25,7.5:9.375,8:9.5,8.5:9.688,9:9.875,9.5:10,10:10.188,10.5:10.375,11:10.5,11.5:10.688,12:10.875},

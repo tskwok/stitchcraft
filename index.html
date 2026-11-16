@@ -45,7 +45,10 @@ textarea{min-height:140px;resize:vertical}
 .bar{display:flex;gap:10px;flex-wrap:wrap}
 .hint{font:.95rem system-ui,sans-serif;color:var(--mute);margin:8px 0 0}
 .rec{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px;padding:10px;border:1px solid var(--line);border-radius:8px;margin-top:8px}
-.rec b{display:block}.rec span{font:.99rem system-ui,sans-serif;color:var(--mute)}
+.rec b{display:block}
+.rid{display:flex;align-items:center;gap:12px}
+.av{flex:none;width:48px;height:48px;border-radius:50%;border:2px dashed var(--line);background:var(--soft) center/cover no-repeat;display:flex;align-items:center;justify-content:center;font-size:1.4rem;color:var(--mute)}
+.av.has{border-style:solid}.rec span{font:.99rem system-ui,sans-serif;color:var(--mute)}
 .rec button{font:1.02rem system-ui,sans-serif;cursor:pointer;border:1px solid var(--line);background:none;color:var(--ink);border-radius:6px;padding:9px 12px;min-height:40px;margin-left:4px}
 #msg{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:5;width:max-content;max-width:92vw;font:600 1.02rem system-ui,sans-serif;background:var(--acc);color:var(--acc-ink);padding:10px 16px;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.3);text-align:center}
 #msg:empty{opacity:0;padding:0;pointer-events:none}
@@ -628,11 +631,16 @@ $("#fAdd").onclick=function(){
 };
 
 /* cast list */
+/* round profile picture for a list row; decorative, the name sits right beside it */
+function avatar(src){
+  var ok=typeof src==="string"&&/^data:image\/(png|jpe?g|gif|webp);base64,[A-Za-z0-9+\/=]+$/.test(src);
+  return '<div class="av'+(ok?' has':'')+'" aria-hidden="true"'+(ok?' style="background-image:url(\''+src+'\')"':'')+'>'+(ok?'':'\uD83D\uDC64')+'</div>';
+}
 function renderCast(){
   var a=castOf(curProd.id),l=$("#list");
   if(!a.length){l.innerHTML='<p class="hint">No cast members yet.</p>';return}
   l.innerHTML=a.map(function(r){
-    return '<div class="rec"><div><b>'+esc(r.name||"Unnamed")+'</b><span>'+esc(r.character||"No character")+'</span></div><div><button type="button" data-open="'+r.id+'" aria-label="Open '+esc(r.name||"Unnamed")+'">Open</button><button type="button" data-del="'+r.id+'" aria-label="Delete '+esc(r.name||"Unnamed")+'">Delete</button></div></div>';
+    return '<div class="rec"><div class="rid">'+avatar(r.photo)+'<div><b>'+esc(r.name||"Unnamed")+'</b><span>'+esc(r.character||"No character")+'</span></div></div><div><button type="button" data-open="'+r.id+'" aria-label="Open '+esc(r.name||"Unnamed")+'">Open</button><button type="button" data-del="'+r.id+'" aria-label="Delete '+esc(r.name||"Unnamed")+'">Delete</button></div></div>';
   }).join("");
 }
 $("#list").addEventListener("click",function(e){

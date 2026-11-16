@@ -161,9 +161,8 @@ textarea.s{min-height:76px}
 
 <div id="vProd" class="view" hidden>
   <div class="crumb"><button type="button" class="link" id="bHome">← All productions</button></div>
-  <h2 class="vt" id="tProd" data-vf tabindex="-1"></h2>
   <section>
-    <h2>Section 1: Production Information</h2>
+    <h2 data-vf tabindex="-1">Section 1: Production Information</h2>
     <div class="poster-row">
       <div class="poster" id="poster" role="group" aria-label="Production poster">
         <span id="posterIcon" aria-hidden="true">🎭</span>
@@ -468,10 +467,9 @@ function openProd(id){
   curProd=db.productions.filter(function(x){return x.id===id})[0];if(!curProd)return;
   PKEYS.forEach(function(k){$('[data-p="'+k+'"]').value=curProd[k]||""});
   checkRun("load");webEditing=false;renderWeb();showPoster();
-  $("#ioMsg").textContent="";prodTitle();renderFields();renderCast();show("vProd");
+  $("#ioMsg").textContent="";renderFields();renderCast();show("vProd");
 }
-function prodTitle(){$("#tProd").textContent=(curProd&&curProd.name)||"Untitled production"}
-$$("[data-p]").forEach(function(i){i.addEventListener("input",function(){if(!curProd)return;curProd[i.dataset.p]=i.value;saveDB();if(i.dataset.p==="name")prodTitle()})});
+$$("[data-p]").forEach(function(i){i.addEventListener("input",function(){if(!curProd)return;curProd[i.dataset.p]=i.value;saveDB()})});
 $("#bHome").onclick=function(){renderHome();show("vHome")};
 $("#pDel").onclick=function(){
   if(!curProd)return;var n=castOf(curProd.id).length,id=curProd.id;

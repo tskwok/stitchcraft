@@ -17,7 +17,7 @@ Open it in a browser to run it. Originally published as a claude.ai artifact.
 - Cast form: `read()/fill()/saveCast()`, `setUnit/calc/footCalc`, `wrapLabels` (runs once; wraps label text in `.lt`), unsaved-changes guard `snap()/dirty()`
 - Number validation: one `change` handler on `#vCast` for inputs with `min="0"` (`isMeasure`)
 - Measurement guide ("i" buttons): `GSVG`/`GTXT` arrays + base64 silhouette masks in CSS (`.sF`, `.sM`)
-- Import / export (`#vProd` Section 4): `#pExp` writes `{app:"stitchcraft",version,productions:[one],members}` as JSON via `saveFile()`; `importData()` copies productions in with fresh ids, text-only values and `data:image` pictures only.
+- Import / export (bottom bar of `#vProd`): `#pExp` writes `{app:"stitchcraft",version,productions:[one],members}` as JSON via `saveFile()`; `importData()` copies productions in with fresh ids, text-only values and `data:image` pictures only.
 - PDF export: `pdfData/pdfBuild`, jsPDF 2.5.1 loaded lazily from cdnjs. Print uses `buildPrint()` + `#pSheet` with the same layout.
 - The artifact `downloads` capability saves the PDF when hosted on claude.ai; outside it, the code falls back to `doc.save()`.
 

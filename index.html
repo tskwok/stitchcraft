@@ -204,15 +204,9 @@ textarea.s{min-height:76px}
     <div class="bar" style="margin-top:12px"><button type="button" class="btn" id="cNew">+ Add Cast Member</button></div>
   </section>
 
-  <section>
-    <h2>Section 4: Import / Export</h2>
-    <p class="hint" style="margin:0 0 12px">Export saves this production and all of its cast members to a file you can keep as a backup or open on another device. Import adds the production from such a file as a new production; nothing already here is changed.</p>
-    <div class="bar"><button type="button" class="btn alt" id="pExp">Export Production</button><button type="button" class="btn alt" id="pImp">Import Production</button></div>
-    <input type="file" id="impFile" accept=".json,application/json" style="display:none">
-    <p class="hint" id="ioMsg" role="status" style="color:var(--acc)"></p>
-  </section>
-
-  <div class="bar"><button type="button" class="btn alt" id="pDel">Delete Production</button></div>
+  <div class="bar"><button type="button" class="btn alt" id="pExp">Export Production</button><button type="button" class="btn alt" id="pImp">Import Production</button><button type="button" class="btn alt" id="pDel">Delete Production</button></div>
+  <input type="file" id="impFile" accept=".json,application/json" style="display:none">
+  <p class="hint" id="ioMsg" role="status" style="color:var(--acc)"></p>
 </div>
 
 <div id="vCast" class="view" hidden>

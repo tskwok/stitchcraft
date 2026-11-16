@@ -775,13 +775,13 @@ $("#vCast").addEventListener("change",function(e){
   /* a number input reports "" for text it can't parse, e.g. a pasted "abc" */
   var junk=t.value===""&&t.validity&&t.validity.badInput;
   if(t.value===""&&!junk){if(inBody)$("#bodyMsg").textContent="";return}
-  var strict=inBody||/^(pantWaist|pantInseam)$/.test(t.dataset.k||"");
+  var strict=inBody||t.id==="hFt"||/^(pantWaist|pantInseam)$/.test(t.dataset.k||"");
   var bad=junk||(strict?!(n>0):n<0);
   if(!bad){if(inBody)$("#bodyMsg").textContent="";return}
   t.value="";
   t.dispatchEvent(new Event("input",{bubbles:true}));
   if(inBody)$("#bodyMsg").textContent="Measurements must be positive numbers greater than 0.";
-  else if(strict)msg("Pant Waist and Pant Inseam must be greater than 0, so it was cleared.");
+  else if(strict)msg((t.id==="hFt"?"Height in feet":"Pant Waist and Pant Inseam")+" must be greater than 0, so it was cleared.");
   else msg("That number can\u2019t be negative, so it was cleared.");
 });
 /* Hat is a text box (it takes "7 1/4" or "M"), so its positive-only rule is checked separately when the field is left */

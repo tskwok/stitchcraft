@@ -123,6 +123,8 @@ textarea.s{min-height:76px}
 .poster-row{display:flex;flex-wrap:wrap;gap:14px 20px;align-items:flex-start;margin-bottom:14px}
 .pinfo{flex:1 1 260px;max-width:560px}
 #posterMsg{margin:0}
+/* wide screens: the poster is as tall as the fields beside it, so its bottom lines up with the run dates */
+@media (min-width:600px){.poster-row{align-items:stretch}.poster-row .poster{width:200px;aspect-ratio:auto}}
 #posterMsg:empty,#runMsg:empty{display:none}
 .poster{position:relative;width:150px;aspect-ratio:2/3;flex:none;border:2px dashed var(--line);border-radius:8px;background:var(--soft) center/contain no-repeat;display:flex;align-items:center;justify-content:center;font-size:2.4rem;color:var(--mute)}
 .pbtn{position:absolute;top:6px;width:40px;height:40px;padding:0;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--acc);cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.3)}
@@ -179,9 +181,9 @@ textarea.s{min-height:76px}
         <label>Run Dates: From<input type="date" data-p="runStart"></label>
         <label>Run Dates: To<input type="date" data-p="runEnd"></label>
       </div>
-      <div class="hint" id="runMsg" role="alert" style="margin:-6px 0 0;color:var(--acc)"></div>
       </div>
     </div>
+    <div class="hint" id="runMsg" role="alert" style="margin:-6px 0 12px;color:var(--acc)"></div>
     <div class="grid one">
       <label>Stage Management<textarea class="s" data-p="stageManager" placeholder="Names and roles, one per line"></textarea></label>
       <label>Producers<textarea class="s" data-p="producers" placeholder="Names, one per line"></textarea></label>

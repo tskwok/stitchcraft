@@ -6,10 +6,10 @@
 <title>StitchCraft</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
-:root{--bg:#F4EFE7;--card:#FAF7F2;--ink:#2B1F17;--mute:#5A4130;--line:#DCCDBA;--acc:#553C2B;--acc-ink:#F4EFE7;--soft:#E9E1D3;--sage:#A8AD9A;--fig:#CDBDAB;
+:root{--bg:#F4EFE7;--card:#FAF7F2;--ink:#2B1F17;--mute:#5A4130;--line:#DCCDBA;--acc:#553C2B;--acc-ink:#F4EFE7;--soft:#E9E1D3;--sage:#A8AD9A;--fig:#CDBDAB;--danger:#A3271B;
 box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#1E1611;--card:#271D16;--ink:#F4EFE7;--mute:#B5A393;--line:#41332A;--acc:#DCCDBA;--acc-ink:#1E1611;--soft:#32261D;--fig:#5C4A3C}}
-:root[data-theme="dark"]{color-scheme:dark;--bg:#1E1611;--card:#271D16;--ink:#F4EFE7;--mute:#B5A393;--line:#41332A;--acc:#DCCDBA;--acc-ink:#1E1611;--soft:#32261D;--fig:#5C4A3C}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#1E1611;--card:#271D16;--ink:#F4EFE7;--mute:#B5A393;--line:#41332A;--acc:#DCCDBA;--acc-ink:#1E1611;--soft:#32261D;--fig:#5C4A3C;--danger:#F0897C}}
+:root[data-theme="dark"]{color-scheme:dark;--danger:#F0897C;--bg:#1E1611;--card:#271D16;--ink:#F4EFE7;--mute:#B5A393;--line:#41332A;--acc:#DCCDBA;--acc-ink:#1E1611;--soft:#32261D;--fig:#5C4A3C}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:Georgia,"Times New Roman",serif;line-height:1.4}
@@ -41,6 +41,7 @@ textarea{min-height:140px;resize:vertical}
 .lt{display:block;min-width:0;overflow-wrap:anywhere}
 .btn{border:0;border-radius:8px;padding:11px 18px;font:600 1.12rem system-ui,sans-serif;cursor:pointer;background:var(--acc);color:var(--acc-ink)}
 .btn.alt{background:none;color:var(--acc);border:1px solid var(--acc)}
+.btn.alt.danger{color:var(--danger);border-color:var(--danger)}
 .bar{display:flex;gap:10px;flex-wrap:wrap}
 .hint{font:.95rem system-ui,sans-serif;color:var(--mute);margin:8px 0 0}
 .rec{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px;padding:10px;border:1px solid var(--line);border-radius:8px;margin-top:8px}
@@ -204,7 +205,7 @@ textarea.s{min-height:76px}
     <div class="bar" style="margin-top:12px"><button type="button" class="btn" id="cNew">+ Add Cast Member</button></div>
   </section>
 
-  <div class="bar"><button type="button" class="btn alt" id="pExp">Export Production</button><button type="button" class="btn alt" id="pImp">Import Production</button><button type="button" class="btn alt" id="pDel">Delete Production</button></div>
+  <div class="bar"><button type="button" class="btn alt" id="pExp">Export Production</button><button type="button" class="btn alt" id="pImp">Import Production</button><button type="button" class="btn alt danger" id="pDel">Delete Production</button></div>
   <input type="file" id="impFile" accept=".json,application/json" style="display:none">
   <p class="hint" id="ioMsg" role="status" style="color:var(--acc)"></p>
 </div>

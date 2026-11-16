@@ -218,7 +218,6 @@ textarea.s{min-height:76px}
 
   <section>
     <div class="row">
-      <label>Measurement Recorded By<input data-k="recordedBy"></label>
       <div class="lab" role="group" aria-labelledby="uLab"><span class="lt" id="uLab">Units of Measurement</span>
         <span class="unit"><button type="button" id="uIn" class="on" aria-pressed="true">Inches</button><button type="button" id="uCm" aria-pressed="false">cm</button></span>
       </div>
@@ -318,7 +317,7 @@ var BODY=[["headCirc","Head Circumference"],["neckCirc","Base Of Neck Circumfere
 var SIZES=["XS","S","M","L","XL","XXL","XXXL"];
 
 var KEY="stitchcraft-v2";
-var unit="in",curId=null,curProd=null,castVals={},lastRec="",lastUnit="in";
+var unit="in",curId=null,curProd=null,castVals={},lastUnit="in";
 var db={productions:[],members:[]};
 var $=function(s){return document.querySelector(s)};
 var $$=function(s){return Array.prototype.slice.call(document.querySelectorAll(s))};
@@ -883,7 +882,7 @@ window.addEventListener("beforeunload",function(e){if(dirty()){e.preventDefault(
 function openCast(id){
   var r=id?db.members.filter(function(x){return x.id===id})[0]:null;
   $("#cCrumb").textContent=(curProd.name||"Untitled production")+" · "+(r?"Cast member":"New cast member");
-  fill(r||{unit:lastUnit,recordedBy:lastRec});
+  fill(r||{unit:lastUnit});
   show("vCast");
   snap();
 }
@@ -906,7 +905,7 @@ function saveCast(){
     msg("Couldn\u2019t save: this browser\u2019s storage is full or blocked. Removing the profile picture may help.");
     return false;
   }
-  lastRec=r.recordedBy;lastUnit=r.unit;
+  lastUnit=r.unit;
   snap();
   msg("Saved \u2713");
   return true;
@@ -914,7 +913,7 @@ function saveCast(){
 $("#save").onclick=saveCast;
 $("#saveNew").onclick=function(){
   if(!saveCast())return;
-  fill({unit:lastUnit,recordedBy:lastRec});snap();
+  fill({unit:lastUnit});snap();
   $("#cCrumb").textContent=(curProd.name||"Untitled production")+" · New cast member";
   window.scrollTo(0,0);$("#cCrumb").focus({preventScroll:true});msg("Saved. Ready for the next cast member.");
 };

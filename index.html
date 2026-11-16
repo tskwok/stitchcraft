@@ -115,8 +115,6 @@ h3{font-size:1.15rem;margin:20px 0 6px;color:var(--acc)}
 textarea.s{min-height:76px}
 .fr{display:flex;flex-wrap:wrap;gap:8px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:8px;background:var(--bg);margin-top:8px}
 .fr>div{min-width:0}
-.frc{flex:1 1 100%}
-.cnote{font:.95rem/1.35 system-ui,sans-serif;color:var(--mute);white-space:normal}
 .frn{flex:2 1 180px}.frt{flex:1 1 160px}.fro{flex:2 1 180px}
 .cpb:disabled{opacity:.35;cursor:default}
 .grid+.grid{margin-top:12px}
@@ -574,7 +572,6 @@ function renderFields(){
       +'<div class="frt"><select data-fk="type" aria-label="Input type">'+CTYPES.map(function(t){return'<option value="'+t[0]+'"'+(t[0]===x.type?' selected':'')+'>'+t[1]+'</option>'}).join("")+'</select></div>'
       +(x.type==="dropdown"?'<div class="fro"><input data-fk="options" placeholder="Options, separated by commas" value="'+esc((x.options||[]).join(", "))+'" aria-label="Dropdown options"></div>':'')
       +'<div class="cpa"><button type="button" class="cpb" data-fa="up" aria-label="Move '+an+' up"'+(i===0?' disabled':'')+'>↑</button><button type="button" class="cpb" data-fa="down" aria-label="Move '+an+' down"'+(i===f.length-1?' disabled':'')+'>↓</button><button type="button" class="cpb" data-fa="rm" aria-label="Remove '+an+'">Remove</button></div>'
-      +'<div class="frc"><input data-fk="note" placeholder="How to fill out this field (optional comment)" value="'+esc(x.note||"")+'" aria-label="Instructions for filling out this field"></div>'
       +'</div>';
   }).join("");
 }
@@ -583,7 +580,6 @@ $("#fList").addEventListener("input",function(e){
   var t=e.target,k=t.dataset.fk,i=fieldIdx(t);if(!k||i<0||t.tagName==="SELECT")return;
   var x=curProd.fields[i];
   if(k==="name")x.name=t.value;
-  if(k==="note")x.note=t.value;
   if(k==="options")x.options=t.value.split(",").map(function(s){return s.trim()}).filter(Boolean);
   saveDB();
 });
@@ -849,7 +845,7 @@ function renderCustom(){
   if(!fs.length){l.innerHTML='<p class="hint">This production has no extra measurements. You can add them on the production page.</p>';return}
   l.innerHTML='<div class="cpgrid">'+fs.map(function(p){
     var c=castVals[p.id]||(castVals[p.id]={value:"",comment:"",showC:false});
-    var inp,a=' data-fid="'+p.id+'" data-f="value" aria-labelledby="cn_'+p.id+'"'+(p.note?' aria-describedby="cd_'+p.id+'"':'');
+    var inp,a=' data-fid="'+p.id+'" data-f="value" aria-labelledby="cn_'+p.id+'"';
     if(p.type==="dropdown"||p.type==="yesno"){
       var opts=p.type==="yesno"?["Yes","No"]:(p.options||[]);
       inp='<select'+a+'><option value="">Select…</option>'+opts.map(function(o){return'<option value="'+esc(o)+'"'+(o===c.value?' selected':'')+'>'+esc(o)+'</option>'}).join("")+'</select>';
@@ -859,7 +855,7 @@ function renderCustom(){
       inp='<input type="number" step="any" inputmode="decimal"'+(p.type==="measure"?' min="0"':'')+a+' value="'+esc(c.value)+'">';
     }
     var title=p.name+(p.type==="measure"?' ('+unit+')':'');
-    return '<div class="cp"><div class="cph"><span class="cn" id="cn_'+p.id+'">'+esc(title)+'</span></div>'+(p.note?'<div class="cnote" id="cd_'+p.id+'">'+esc(p.note)+'</div>':'')+inp+'</div>';
+    return '<div class="cp"><div class="cph"><span class="cn" id="cn_'+p.id+'">'+esc(title)+'</span></div>'+inp+'</div>';
   }).join("")+'</div>';
 }
 function onCustomEdit(e){var t=e.target,id=t.dataset.fid,f=t.dataset.f;if(!id||!f||!castVals[id])return;castVals[id][f]=t.value}
@@ -960,7 +956,7 @@ function pdfData(){
     sec.querySelectorAll("label,.lab,.cp").forEach(function(l){
       var cs=[].slice.call(l.querySelectorAll("input,select,textarea")).filter(function(c){return c.type!=="hidden"&&c.type!=="file"&&c.offsetParent!==null});
       var nm=l.cloneNode(true);
-      nm.querySelectorAll("input,select,textarea,button,.note,.cnote,.hint,small,option").forEach(function(n){n.remove()});
+      nm.querySelectorAll("input,select,textarea,button,.note,.hint,small,option").forEach(function(n){n.remove()});
       var name=nm.textContent.replace(/\s+/g," ").trim();
       if(!name)return;
       if(l.querySelector(".unit")){rows.push([name,unit==="cm"?"Centimetres (cm)":"Inches (in)"]);return}

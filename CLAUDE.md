@@ -16,13 +16,13 @@ Open it in a browser to run it. Originally published as a claude.ai artifact.
 - Storage: `loadDB/saveDB/normProd`
 - Cast form: `read()/fill()/saveCast()`, `setUnit/calc/footCalc`, `wrapLabels` (runs once; wraps label text in `.lt`), unsaved-changes guard `snap()/dirty()`
 - Number validation: one `change` handler on `#vCast` for inputs with `min="0"` (`isMeasure`)
-- Measurement guide ("i" buttons): `GSVG`/`GTXT` arrays + base64 silhouette masks in CSS (`.sF`, `.sM`)
+- Measurement guide ("i" buttons): `GSVG`/`GTXT` arrays (index = position in `BODY`, or the entry's third element; 14 = Shoulder To Wrist, 15 = Waist To Floor) + base64 silhouette masks in CSS (`.sF`, `.sM`)
 - Import / export (bottom bar of `#vProd`): `#pExp` writes `{app:"stitchcraft",version,productions:[one],members}` as JSON via `saveFile()`; `importData()` copies productions in with fresh ids, text-only values and `data:image` pictures only.
 - PDF export: `pdfData/pdfBuild`, jsPDF 2.5.1 loaded lazily from cdnjs. Print uses `buildPrint()` + `#pSheet` with the same layout.
 - The artifact `downloads` capability saves the PDF when hosted on claude.ai; outside it, the code falls back to `doc.save()`.
 
 ## Rules to keep
-- Body Measurements inputs (`#body`) are positive decimals only. Shoulder-to-Wrist is calculated. Pant Waist, Pant Inseam and Height in feet must also be greater than 0. Other measurement inputs reject negatives. Hat is a text box (fractions and letter sizes allowed) that rejects negative and zero numbers. Validate on `change`, not on each keystroke.
+- Body Measurements inputs (`#body`) are positive decimals only. Shoulder-to-Wrist is calculated (Nape To Wrist minus Nape To Shoulder). Nape To Floor is calculated (Nape To Waist plus Waist To Floor); a Nape To Floor saved before Waist To Floor existed is used to back-fill Waist To Floor on open. Pant Waist, Pant Inseam and Height in feet must also be greater than 0. Other measurement inputs reject negatives. Hat is a text box (fractions and letter sizes allowed) that rejects negative and zero numbers. Validate on `change`, not on each keystroke.
 - Field names use Title Case (custom names are converted by `titleCase()` when the field is left). Run end date must not be before start.
 - Keep it a single file with light/dark theme CSS variables.
 - Labels wrap; never shrink label text to fit. Tap targets stay at about 40px.

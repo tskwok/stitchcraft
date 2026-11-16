@@ -195,7 +195,7 @@ textarea.s{min-height:76px}
 
   <section>
     <h2>Production Specific Measurements</h2>
-    <p class="hint" style="margin:0 0 4px">Add any extra measurements this show needs and choose what kind of input each one takes. Use the arrows to put them in order. They appear in Section 4 for every cast member.</p>
+    <p class="hint" style="margin:0 0 4px">Add any extra measurements this show needs and choose what kind of input each one takes. Use the arrows to put them in order. They appear on every cast member’s page under Production Specific Measurements.</p>
     <div id="fList"></div>
     <div class="bar" style="margin-top:10px"><button type="button" class="btn alt" id="fAdd">+ Add Measurement</button></div>
     <p class="hint">Changes on this page save automatically.</p>
@@ -226,7 +226,7 @@ textarea.s{min-height:76px}
   </section>
 
 <section>
-  <h2>Section 1: General Information</h2>
+  <h2>General Information</h2>
   <div class="photo">
     <div class="pic" id="pic" role="img" aria-label="No profile picture">👤</div>
     <div>
@@ -247,7 +247,7 @@ textarea.s{min-height:76px}
 </section>
 
 <section>
-  <h2>Section 2: Ready to Wear Sizing</h2>
+  <h2>Ready to Wear Sizing</h2>
   <div class="grid">
     <label>Hat<input data-k="hat" placeholder="e.g. 7 1/4 or M"></label>
   </div>
@@ -274,19 +274,19 @@ textarea.s{min-height:76px}
 </section>
 
 <section>
-  <h2>Section 3: Body Measurements</h2>
+  <h2>Body Measurements</h2>
   <div id="body"></div>
   <p class="hint" id="bodyMsg" role="status" style="color:var(--acc)"></p>
   
 </section>
 
 <section>
-  <h2>Section 4: Production Specific Measurements</h2>
+  <h2>Production Specific Measurements</h2>
   <div id="cList"></div>
 </section>
 
 <section>
-  <h2>Section 5: Additional Information</h2>
+  <h2>Additional Information</h2>
   <label>Sensitivities<textarea data-k="sensitivities" placeholder="Allergies, fabric or skin sensitivities, touch preferences, comfort needs…"></textarea></label>
   <label style="margin-top:12px">Additional Notes<textarea data-k="notes" placeholder="Fitting notes, alterations, preferences, anything else…"></textarea></label>
 </section>
@@ -755,7 +755,7 @@ $("#uCm").onclick=function(){setUnit("cm",true)};
 $('[data-k="napeShoulder"]').addEventListener("input",calc);
 $('[data-k="napeWrist"]').addEventListener("input",calc);
 /* Number rules for the cast form. Every measurement input carries min="0".
-   Section 3: positive decimals only (greater than 0). Everywhere else: no negative numbers.
+   Body Measurements: positive decimals only (greater than 0). Everywhere else: no negative numbers.
    Minus, plus and "e" can't be typed; the value is checked when the field is left, so "0.5" can be typed normally. */
 $$("#vCast .m,#vCast .wt").forEach(function(i){if(!i.readOnly)i.min="0"});
 function isMeasure(t){return t.tagName==="INPUT"&&t.type==="number"&&!t.readOnly&&t.min==="0"}
@@ -834,7 +834,7 @@ $("#gClose").onclick=function(){$("#gDlg").close()};
 $("#gF").onclick=function(){gSel="F";renderGuide()};
 $("#gM").onclick=function(){gSel="M";renderGuide()};
 
-/* Section 4: this production's extra measurements */
+/* Production Specific Measurements on the cast form */
 function renderCustom(){
   var l=$("#cList");if(!curProd){l.innerHTML="";return}
   var fs=curProd.fields.filter(function(f){return (f.name||"").trim()});

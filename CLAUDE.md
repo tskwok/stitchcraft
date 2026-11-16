@@ -10,7 +10,7 @@ Open it in a browser to run it. Originally published as a claude.ai artifact.
 - Data lives only in the browser; there is no backend.
 
 ## Views
-`#vHome` production list; `#vProd` production info, production-specific measurement builder, cast list, import/export; `#vCast` cast form (Sections 1-5).
+`#vHome` production list; `#vProd` production info, production-specific measurement builder, cast list, import/export; `#vCast` cast form (General Information, Ready to Wear Sizing, Body Measurements, Production Specific Measurements, Additional Information; headings carry no section numbers).
 
 ## Key code (search for these)
 - Storage: `loadDB/saveDB/normProd`
@@ -22,7 +22,7 @@ Open it in a browser to run it. Originally published as a claude.ai artifact.
 - The artifact `downloads` capability saves the PDF when hosted on claude.ai; outside it, the code falls back to `doc.save()`.
 
 ## Rules to keep
-- Section 3 inputs are positive decimals only. Shoulder-to-Wrist is calculated. Other measurement inputs reject negatives. Validate on `change`, not on each keystroke.
+- Body Measurements inputs (`#body`) are positive decimals only. Shoulder-to-Wrist is calculated. Other measurement inputs reject negatives. Validate on `change`, not on each keystroke.
 - Field names use Title Case (custom names are converted by `titleCase()` when the field is left). Run end date must not be before start.
 - Keep it a single file with light/dark theme CSS variables.
 - Labels wrap; never shrink label text to fit. Tap targets stay at about 40px.

@@ -7,7 +7,7 @@ Open it in a browser to run it. Originally published as a claude.ai artifact.
 - localStorage key `stitchcraft-v2` = `{productions:[], members:[]}`.
 - Production: `{id,name,website,poster,director,stageManager,producers,props,costumeTeam,setTeam,publicity,runStart,runEnd,fields:[{id,name,type,options,note,off?}],hidden:[]}` (`hidden` = `data-k` keys of cast-form fields switched off for this production; `off:true` on a production-specific field switches it off)
 - Member: every `data-k` form value + `unit`, `id`, `productionId`, `cv:{fieldId:{value,comment}}`.
-- Data lives only in the browser; there is no backend.
+- Data lives in the browser. The only copy outside it is the optional Supabase backup (below).
 
 ## Views
 `#vHome` production list; `#vProd` production info, cast list, import/export; `#vFields` "Cast Page Fields" (reached from the Cast Members section; one switch per cast-form field, plus the production-specific measurements last); `#vCast` cast form (General Information, Ready to Wear Sizing, Body Measurements, Production Specific Measurements, Additional Information; headings carry no section numbers).
@@ -18,6 +18,7 @@ Open it in a browser to run it. Originally published as a claude.ai artifact.
 - Cast page fields: `FMAP` is built from the cast form DOM by `buildFieldMap()` (so new `data-k` fields appear automatically; Name is locked on); `applyFieldVisibility()` hides switched-off fields, empty rows and empty sections (hidden data is kept and still saved; hidden fields drop out of print/PDF); `renderFieldsPage()` draws the switches, copying each field's "i" guide button (`data-g`) from the cast form. The production-specific measurement builder lives only on the Cast Page Fields page (`#fgBuild`/`#fgAdd`, one show/hide switch per row), built by `fieldRows()`/`renderFields()`/`bindBuilder()` from `BLDS`.
 - Number validation: one `change` handler on `#vCast` for inputs with `min="0"` (`isMeasure`)
 - Measurement guide ("i" buttons): `GSVG`/`GTXT` arrays (index = position in `BODY`, or the entry's third element; 14 = Shoulder To Wrist, 15 = Waist To Floor) + base64 silhouette masks in CSS (`.sF`, `.sM`)
+- Supabase backup (`#bkBtn` on `#vHome`; `bkInit/bkRun/bkPlan`): the artifact declares the `mcp` capability for the "Supabase" connector (`execute_sql` only) and the page asks the viewer's connector to upsert whole records as jsonb into `public.sc_productions`, `public.sc_cast_members` and `public.sc_backup_log` in project `fcotvvkiyfgoagsakkgi` (RLS on, no policies, so only the owner can read them). Statements are kept under ~600 KB, text goes in dollar-quotes with a random tag, nothing is ever deleted from the database. It needs the `mcp` capability on publish, so republish with `capabilities` set to both `downloads` and `mcp` (an omitted `capabilities` keeps what is stored).
 - Import / export (bottom bar of `#vProd`): `#pExp` writes `{app:"stitchcraft",version,productions:[one],members}` as JSON via `saveFile()`; `importData()` copies productions in with fresh ids, text-only values and `data:image` pictures only.
 - PDF export: `pdfData/pdfBuild`, jsPDF 2.5.1 loaded lazily from cdnjs. Print uses `buildPrint()` + `#pSheet` with the same layout.
 - The artifact `downloads` capability saves the PDF when hosted on claude.ai; outside it, the code falls back to `doc.save()`.

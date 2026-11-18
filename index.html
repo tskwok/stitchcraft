@@ -177,6 +177,13 @@ textarea.s{min-height:76px}
     <div class="bar" style="margin-top:12px"><button type="button" class="btn" id="pNew">+ New Production</button></div>
     <p class="hint">Saved in this browser on this device.</p>
   </section>
+  <section>
+    <h2>Backup</h2>
+    <p class="hint" style="margin:0 0 12px">Copies every production, cast member, picture and field setting to your Supabase database. Run it as often as you like: each run updates what is already there and adds anything new. Anything you delete here stays in the backup.</p>
+    <div class="bar"><button type="button" class="btn alt" id="bkBtn" disabled>Back Up To Supabase</button></div>
+    <p class="hint" id="bkMsg" role="status" style="color:var(--acc)"></p>
+    <p class="hint" id="bkLast" style="margin-top:0"></p>
+  </section>
 </div>
 
 <div id="vProd" class="view" hidden>
@@ -1252,10 +1259,102 @@ $("#bFProd").onclick=function(){renderCast();show("vProd")};
 
 BLDS.forEach(bindBuilder);
 
+/* ---------- backup to Supabase ----------
+   The page can't reach Supabase directly (artifact pages may only load scripts from a few CDNs), so it asks the
+   viewer's own Supabase connector, through the `mcp` capability, to run SQL. Each record is sent whole, as JSON,
+   into tables that were created for it (sc_productions, sc_cast_members, sc_backup_log). Runs are upserts keyed by
+   the app's own ids, so repeating a backup is safe. Nothing is ever deleted from the database. */
+var BK={project:"fcotvvkiyfgoagsakkgi",server:"Supabase",mcp:null,busy:false};
+function bkSet(t){$("#bkMsg").textContent=t}
+function bkShowLast(){
+  var t="";try{t=localStorage.getItem("stitchcraft-last-backup")||""}catch(e){}
+  var d=t?new Date(t):null;
+  $("#bkLast").textContent=d&&!isNaN(d)?"Last backup from this browser: "+d.toLocaleString():"";
+}
+/* strings go into jsonb, which refuses NUL and lone surrogates, so tidy those first */
+function bkClean(k,v){
+  return typeof v==="string"?v.replace(/\u0000/g,"").replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g,"\uFFFD"):v;
+}
+/* dollar-quote a string with a tag that the text cannot contain, so no stored text can end the quote early */
+function bkQuote(text){
+  var tag;do{tag="sc"+Math.random().toString(36).slice(2,10)}while(text.indexOf("$"+tag+"$")>-1);
+  return "$"+tag+"$"+text+"$"+tag+"$";
+}
+var BK_SQL={
+  p:function(json){return "insert into public.sc_productions (id,name,data) select p->>'id', p->>'name', p from jsonb_array_elements("+bkQuote(json)+"::jsonb) as p where p->>'id' is not null on conflict (id) do update set name=excluded.name, data=excluded.data, backed_up_at=now()"},
+  m:function(json){return "insert into public.sc_cast_members (id,production_id,name,data) select p->>'id', p->>'productionId', p->>'name', p from jsonb_array_elements("+bkQuote(json)+"::jsonb) as p where p->>'id' is not null and p->>'productionId' is not null on conflict (id) do update set production_id=excluded.production_id, name=excluded.name, data=excluded.data, backed_up_at=now()"}
+};
+var BK_BATCH=600000,BK_ONE=850000;
+/* turns records into SQL statements of at most ~600 KB each (a connector call allows 1 MiB) */
+function bkPlan(kind,records,out){
+  var enc=new TextEncoder(),cur=[],bytes=0,n=0;
+  function flush(){if(cur.length)out.jobs.push({kind:kind,n:cur.length,sql:BK_SQL[kind]("["+cur.join(",")+"]")});cur=[];bytes=0}
+  records.forEach(function(r){
+    var j=JSON.stringify(r,bkClean),size=enc.encode(j).length;
+    if(size>BK_ONE){
+      /* an unusually large picture: keep the record, leave the picture out */
+      var slim=Object.assign({},r);if(slim.poster){slim.poster="";out.dropped++}if(slim.photo){slim.photo="";out.dropped++}
+      j=JSON.stringify(slim,bkClean);size=enc.encode(j).length;
+      if(size>BK_ONE){out.skipped++;return}
+    }
+    if(bytes+size>BK_BATCH)flush();
+    cur.push(j);bytes+=size;
+  });
+  flush();
+}
+function bkError(e){
+  var c=e&&e.code;
+  if(c==="needs_reauth")return "Supabase needs to be reconnected. Open Claude settings, go to Connectors and reconnect Supabase.";
+  if(c==="server_not_connected"||c==="selection_required"||c==="server_not_found")return "The Supabase connector isn\u2019t available. Add it in Claude settings, under Connectors.";
+  if(c==="not_in_manifest"||c==="approval_required"||c==="consent_required")return "The backup needs your permission to use Supabase. Allow it when Claude asks, then try again.";
+  if(c==="blocked_by_policy")return "Your organisation doesn\u2019t allow this page to use Supabase.";
+  if(c==="tool_error")return /does not exist/i.test((e&&e.message)||"")?"Supabase says the backup tables are missing from the project.":"Supabase refused part of the backup.";
+  if(c==="server_unavailable"||c==="upstream_error")return "Supabase didn\u2019t answer.";
+  return "The backup didn\u2019t finish.";
+}
+function bkRun(){
+  if(!BK.mcp||BK.busy)return;
+  if(!db.productions.length&&!db.members.length){bkSet("There is nothing to back up yet.");return}
+  var plan={jobs:[],dropped:0,skipped:0};
+  bkPlan("p",db.productions,plan);bkPlan("m",db.members,plan);
+  var total=plan.jobs.length+1,done=0,np=0,nm=0,btn=$("#bkBtn");
+  BK.busy=true;btn.disabled=true;bkSet("Backing up\u2026 0 of "+total);
+  function call(sql){
+    return BK.mcp.callTool(BK.server,"execute_sql",{project_id:BK.project,query:sql},{cache:false}).then(function(){done++;bkSet("Backing up\u2026 "+done+" of "+total)});
+  }
+  var chain=Promise.resolve();
+  plan.jobs.forEach(function(j){chain=chain.then(function(){return call(j.sql)}).then(function(){if(j.kind==="p")np+=j.n;else nm+=j.n})});
+  chain.then(function(){return call("insert into public.sc_backup_log (productions,members) values ("+(np|0)+","+(nm|0)+")")}).then(function(){
+    try{localStorage.setItem("stitchcraft-last-backup",new Date().toISOString())}catch(e){}
+    bkShowLast();
+    bkSet("Backed up "+np+" production"+(np===1?"":"s")+" and "+nm+" cast member"+(nm===1?"":"s")+" to Supabase."
+      +(plan.dropped?" "+plan.dropped+" very large picture"+(plan.dropped===1?" was":"s were")+" left out.":"")
+      +(plan.skipped?" "+plan.skipped+" record"+(plan.skipped===1?" was":"s were")+" too large to send.":""));
+  }).catch(function(e){
+    bkSet(bkError(e)+" "+done+" of "+total+" steps finished. Trying again is safe.");
+  }).then(function(){BK.busy=false;btn.disabled=false});
+}
+$("#bkBtn").onclick=bkRun;
+function bkInit(){
+  bkShowLast();
+  if(!window.claude||!window.claude.use){bkSet("Backing up to Supabase works when this page is open in Claude, with the Supabase connector added.");return}
+  bkSet("Checking for the Supabase connector\u2026");
+  window.claude.use("mcp").then(function(m){
+    if(!m){bkSet("Backing up to Supabase isn\u2019t available in this view.");return}
+    return m.listTools(BK.server).then(function(r){
+      var sv=((r&&r.servers)||[]).filter(function(x){return x.server===BK.server})[0];
+      if(!sv||!sv.tools||!sv.tools.length){bkSet("Add the Supabase connector in Claude settings, under Connectors, then reload this page.");return}
+      if(sv.authStatus==="needs_reauth"){bkSet("Supabase needs to be reconnected. Open Claude settings, go to Connectors and reconnect Supabase.");return}
+      BK.mcp=m;$("#bkBtn").disabled=false;bkSet("");
+    });
+  }).catch(function(){bkSet("Couldn\u2019t check for the Supabase connector. Reload the page to try again.")});
+}
+
 /* start */
 loadDB();
 wrapLabels();
 buildFieldMap();
+bkInit();
 setUnit("in",false);
 renderHome();
 })();

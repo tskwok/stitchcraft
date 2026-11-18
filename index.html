@@ -211,14 +211,6 @@ textarea.s{min-height:76px}
   </section>
 
   <section>
-    <h2>Production Specific Measurements</h2>
-    <p class="hint" style="margin:0 0 4px">Add any extra measurements this show needs and choose what kind of input each one takes. Use the arrows to put them in order. They appear on every cast member’s page under Production Specific Measurements.</p>
-    <div id="fList"></div>
-    <div class="bar" style="margin-top:10px"><button type="button" class="btn alt" id="fAdd">+ Add Measurement</button></div>
-    <p class="hint">Changes on this page save automatically.</p>
-  </section>
-
-  <section>
     <h2>Cast Members</h2>
     <div id="list"></div>
     <div class="bar" style="margin-top:12px"><button type="button" class="btn" id="cNew">+ Add Cast Member</button><button type="button" class="btn alt" id="cFields">Choose Cast Page Fields</button></div>
@@ -601,7 +593,7 @@ $("#impFile").addEventListener("change",function(e){
 
 /* production specific measurement builder */
 var CTYPES=[["measure","Type"],["number","Number"],["text","Text"],["dropdown","Dropdown List"],["yesno","Yes / No"]];
-var BLDS=[{list:"#fList",add:"#fAdd",sw:false},{list:"#fgBuild",add:"#fgAdd",sw:true}];
+var BLDS=[{list:"#fgBuild",add:"#fgAdd",sw:true}];
 /* withSwitch: the copy on the Cast Page Fields page also shows a show/hide switch on each row */
 function fieldRows(withSwitch){
   var f=curProd.fields;

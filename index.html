@@ -109,6 +109,7 @@ body>*:not(#pSheet){display:none!important}
 #pSheet h2{background:#553C2B;color:#fff;font-size:11pt;margin:14px 0 6px;padding:4px 8px;break-after:avoid}
 #pSheet .pr{display:grid;grid-template-columns:170px 1fr;gap:10px;font-size:10pt;padding:3px 0;border-bottom:.5px solid #DCCDBA;break-inside:avoid}
 #pSheet .pr span{color:#5A4130}
+#pSheet .psb{display:block;font-size:9.5pt;font-weight:700;color:#553C2B;margin:10px 0 2px;break-after:avoid}
 #pSheet .pr b{font-weight:400;white-space:pre-wrap;overflow-wrap:anywhere}
 }
 
@@ -155,6 +156,7 @@ textarea.s{min-height:76px}
 .swi:checked::after{transform:translateX(20px);background:var(--acc-ink)}
 .swi:disabled{opacity:.55;cursor:default}
 .fgb{margin:0 0 6px}
+#body .reg:first-child>h3{margin-top:4px}
 .swt .ib{display:inline-flex;vertical-align:middle;margin-left:8px}
 .frs{flex:1 1 100%}
 .fr .sw{border-bottom:0;min-height:40px;padding:0}
@@ -704,8 +706,15 @@ BF.footSize='<label>Foot Length (<span class="u">in</span>)<input class="m" data
 BF.shoulderWrist='<label class="hasi">Sleeve: Shoulder To Wrist (<span class="u">in</span>)<input class="m" data-k="shoulderWrist" readonly tabindex="-1"><button type="button" class="ib" data-g="14" aria-label="How Shoulder To Wrist is worked out">i</button><span class="note" id="swNote">Calculated automatically: Nape To Wrist minus Nape To Shoulder.</span></label>';
 BF.napeFloor='<label class="hasi">Nape To Floor (<span class="u">in</span>)<input class="m" data-k="napeFloor" readonly tabindex="-1"><button type="button" class="ib" data-g="10" aria-label="How Nape To Floor is worked out">i</button><span class="note" id="nfNote">Calculated automatically: Nape To Waist plus Waist To Floor.</span></label>';
 /* each inner list is one line of fields */
-[["headCirc","neckCirc"],["napeShoulder","napeElbow","napeWrist"],["shoulderWrist"],["chestCirc","ribCirc"],["waistCirc","hipCirc"],["kneeCirc","inseamFloor","outseamFloor"],["napeWaist","waistFloor"],["napeFloor"],["footSize"]].forEach(function(g){
-  bodyBox.insertAdjacentHTML("beforeend",'<div class="grid">'+g.map(function(k){return BF[k]}).join("")+'</div>');
+/* each region is one block: a sub-heading plus rows of fields (one inner list is one row) */
+[["Head",[["headCirc","neckCirc"]]],
+ ["Body",[["chestCirc","ribCirc"],["waistCirc","hipCirc"],["napeWaist","napeFloor"]]],
+ ["Arms",[["napeShoulder","napeElbow","napeWrist"],["shoulderWrist"]]],
+ ["Legs",[["kneeCirc","inseamFloor","outseamFloor"],["waistFloor","footSize"]]]
+].forEach(function(r){
+  bodyBox.insertAdjacentHTML("beforeend",'<div class="reg" data-region="'+r[0]+'"><h3>'+r[0]+'</h3>'+r[1].map(function(g){
+    return '<div class="grid">'+g.map(function(k){return BF[k]}).join("")+'</div>';
+  }).join("")+'</div>');
 });
 $$(".sz").forEach(function(s){s.innerHTML='<option value="">Select…</option>'+SIZES.map(function(x){return"<option>"+x+"</option>"}).join("")});
 
@@ -1039,7 +1048,10 @@ function buildPrint(){
   var h='<div class="pbar"></div><div class="pbr">STITCHCRAFT</div><div class="ppr">'+esc(curProd.name||"Untitled production")+'</div>'+(ph?'<img class="pph" src="'+esc(ph)+'" alt="">':'')+'<h1>'+esc(nm)+'</h1><div class="psub">'+esc(sub)+'</div>';
   pdfData().forEach(function(sec){
     if(sec.title)h+='<h2>'+esc(sec.title)+'</h2>';
-    sec.rows.forEach(function(r){h+='<div class="pr"><span>'+esc(r[0])+'</span><b>'+esc(r[1]||"-")+'</b></div>'});
+    sec.rows.forEach(function(r){
+      if(r[2]){h+='<div class="psb">'+esc(r[0])+'</div>';return}
+      h+='<div class="pr"><span>'+esc(r[0])+'</span><b>'+esc(r[1]||"-")+'</b></div>';
+    });
   });
   $("#pSheet").innerHTML=h;
 }
@@ -1064,7 +1076,8 @@ function pdfData(){
   var secs=[];
   $$("#vCast section").forEach(function(sec){
     var h=sec.querySelector("h2"),rows=[];
-    sec.querySelectorAll("label,.lab,.cp").forEach(function(l){
+    sec.querySelectorAll("label,.lab,.cp,.reg>h3").forEach(function(l){
+      if(l.tagName==="H3"){if(l.offsetParent!==null)rows.push([l.textContent.trim(),"",true]);return}
       var cs=[].slice.call(l.querySelectorAll("input,select,textarea")).filter(function(c){return c.type!=="hidden"&&c.type!=="file"&&c.offsetParent!==null});
       var nm=l.cloneNode(true);
       nm.querySelectorAll("input,select,textarea,button,.note,.hint,small,option").forEach(function(n){n.remove()});
@@ -1109,6 +1122,7 @@ function pdfBuild(J){
       d.text(pdfTxt(sec.title),M+8,y+14);y+=28;
     }
     sec.rows.forEach(function(r){
+      if(r[2]){ensure(34);d.setFont("helvetica","bold");d.setFontSize(10);d.setTextColor(85,60,43);d.text(pdfTxt(r[0]),M,y+10);y+=20;return}
       var v=pdfTxt(r[1])||"-";
       d.setFont("helvetica","normal");d.setFontSize(10);
       var vl=d.splitTextToSize(v,VW),ll=d.splitTextToSize(pdfTxt(r[0]),LW);
@@ -1159,7 +1173,7 @@ function buildFieldMap(){
       var lt=box.querySelector(".lt");
       var label=photo?"Profile Picture":(lt?lt.textContent:box.textContent).replace(/\s*\([^)]*\)\s*$/,"").replace(/\s+/g," ").trim();
       var ib=box.querySelector(".ib");
-      FMAP.push({k:k,label:label,group:group,box:box,calc:!!el.readOnly,locked:k==="name",g:ib?ib.dataset.g:null,gl:ib?ib.getAttribute("aria-label"):""});
+      FMAP.push({k:k,label:label,group:group,box:box,calc:!!el.readOnly,locked:k==="name",region:(box.closest(".reg")||{dataset:{}}).dataset.region||"",g:ib?ib.dataset.g:null,gl:ib?ib.getAttribute("aria-label"):""});
     });
   });
 }
@@ -1169,6 +1183,7 @@ function applyFieldVisibility(){
   FMAP.forEach(function(f){f.box.hidden=!f.locked&&hid.indexOf(f.k)>-1});
   /* a row or a whole section with nothing left to show disappears too */
   $$("#vCast .grid").forEach(function(g){g.hidden=[].every.call(g.children,function(c){return c.hidden})});
+  $$("#vCast .reg").forEach(function(r){r.hidden=[].every.call(r.querySelectorAll(".grid"),function(g){return g.hidden})});
   $$("#vCast section").forEach(function(sec){
     if(!sec.querySelector("h2"))return;
     var any=[].some.call(sec.querySelectorAll("[data-k]"),function(el){return shownIn(el,sec)})||!!sec.querySelector(".cp,#cList .hint");
@@ -1178,18 +1193,30 @@ function applyFieldVisibility(){
 function swHtml(attr,key,label,on,note,locked,ib){
   return '<label class="sw"><span class="swt">'+esc(label)+(ib||"")+(note?'<i>'+esc(note)+'</i>':'')+'</span><input type="checkbox" role="switch" class="swi" '+attr+'="'+esc(key)+'"'+(on?' checked':'')+(locked?' disabled':'')+'></label>';
 }
-function gBtns(name,prod){
-  var d=prod?' data-gp="1"':'',nm=esc(name);
-  return '<button type="button" class="cpb" data-fg="on" data-gname="'+nm+'"'+d+' aria-label="Show all '+nm+' fields">Show All</button><button type="button" class="cpb" data-fg="off" data-gname="'+nm+'"'+d+' aria-label="Hide all '+nm+' fields">Hide All</button>';
+function gBtns(name,prod,region){
+  var d=prod?' data-gp="1"':(region?' data-region="'+esc(region)+'"':''),nm=esc(name);
+  var what=region?esc(region)+" measurements":nm+" fields";
+  return '<button type="button" class="cpb" data-fg="on" data-gname="'+nm+'"'+d+' aria-label="Show all '+what+'">Show All</button><button type="button" class="cpb" data-fg="off" data-gname="'+nm+'"'+d+' aria-label="Hide all '+what+'">Hide All</button>';
 }
 function renderFieldsPage(){
   if(!curProd)return;
   var hid=curProd.hidden,groups=[],by={};
   FMAP.forEach(function(f){if(!by[f.group]){by[f.group]=[];groups.push(f.group)}by[f.group].push(f)});
+  var row=function(f){
+    return swHtml("data-ff",f.k,f.label,f.locked||hid.indexOf(f.k)<0,f.locked?"Always shown":(f.calc?"Calculated":""),f.locked,f.g!=null?'<button type="button" class="ib" data-g="'+esc(f.g)+'" aria-label="'+esc(f.gl)+'">i</button>':"");
+  };
   var h=groups.map(function(g){
-    return '<section><h2>'+esc(g)+'</h2><div class="bar fgb">'+gBtns(g,false)+'</div><div class="tg">'+by[g].map(function(f){
-      return swHtml("data-ff",f.k,f.label,f.locked||hid.indexOf(f.k)<0,f.locked?"Always shown":(f.calc?"Calculated":""),f.locked,f.g!=null?'<button type="button" class="ib" data-g="'+esc(f.g)+'" aria-label="'+esc(f.gl)+'">i</button>':"");
-    }).join("")+'</div></section>';
+    var items=by[g],inner='<div class="bar fgb">'+gBtns(g,false)+'</div>';
+    if(!items.some(function(f){return f.region}))inner+='<div class="tg">'+items.map(row).join("")+'</div>';
+    else{
+      /* Body Measurements is split into Head / Body / Arms / Legs, as on the cast page */
+      var regs=[],rb={};
+      items.forEach(function(f){if(!rb[f.region]){rb[f.region]=[];regs.push(f.region)}rb[f.region].push(f)});
+      inner+=regs.map(function(r){
+        return '<h3>'+esc(r)+'</h3><div class="bar fgb">'+gBtns(g,false,r)+'</div><div class="tg">'+rb[r].map(row).join("")+'</div>';
+      }).join("");
+    }
+    return '<section><h2>'+esc(g)+'</h2>'+inner+'</section>';
   }).join("");
   $("#fgList").innerHTML=h;
 }
@@ -1207,17 +1234,17 @@ $("#fgWrap").addEventListener("change",function(e){
 });
 $("#fgWrap").addEventListener("click",function(e){
   var b=e.target.closest&&e.target.closest("[data-fg]");if(!b||!curProd)return;
-  var on=b.dataset.fg==="on",name=b.dataset.gname;
+  var on=b.dataset.fg==="on",name=b.dataset.gname,rg=b.dataset.region||"";
   if(b.dataset.gp)curProd.fields.forEach(function(f){if(on)delete f.off;else f.off=true});
   else FMAP.forEach(function(f){
-    if(f.group!==name||f.locked)return;
+    if(f.group!==name||f.locked||(rg&&f.region!==rg))return;
     var i=curProd.hidden.indexOf(f.k);
     if(on&&i>-1)curProd.hidden.splice(i,1);
     if(!on&&i<0)curProd.hidden.push(f.k);
   });
   saveDB();renderFieldsPage();renderFields();
-  $("#fgMsg").textContent=on?"Showing every "+name+" field.":"Hiding every "+name+" field"+(name==="General Information"?" except Name.":".");
-  var again=$$("#fgWrap [data-fg]").filter(function(x){return x.dataset.fg===b.dataset.fg&&x.dataset.gname===b.dataset.gname})[0];
+  $("#fgMsg").textContent=on?"Showing every "+(rg||name)+" field.":"Hiding every "+(rg||name)+" field"+(name==="General Information"?" except Name.":".");
+  var again=$$("#fgWrap [data-fg]").filter(function(x){return x.dataset.fg===b.dataset.fg&&x.dataset.gname===b.dataset.gname&&x.dataset.region===b.dataset.region})[0];
   if(again)again.focus();
 });
 $("#cFields").onclick=function(){if(!curProd)return;$("#fgMsg").textContent="";renderFieldsPage();renderFields();show("vFields")};

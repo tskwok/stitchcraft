@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>StitchCraft</title>
 <meta name="claude:viewport-fit-sides" content="cover">
+<script>
+/* On the hosted website (not inside Claude, not a local file) people must sign in first. */
+(function(){var h=location.hostname;if(!window.claude&&/^https?:$/.test(location.protocol)&&!/^(localhost|127\.0\.0\.1|\[::1\])$/.test(h))document.documentElement.className+=" cloud"})();
+</script>
 <style>
 :root{--bg:#F4EFE7;--card:#FAF7F2;--ink:#2B1F17;--mute:#5A4130;--line:#DCCDBA;--acc:#553C2B;--acc-ink:#F4EFE7;--soft:#E9E1D3;--sage:#A8AD9A;--fig:#CDBDAB;--danger:#A3271B;
 box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
@@ -156,6 +160,11 @@ textarea.s{min-height:76px}
 .swi:checked::after{transform:translateX(20px);background:var(--acc-ink)}
 .swi:disabled{opacity:.55;cursor:default}
 .fgb{margin:0 0 6px}
+.cloud:not(.cloud-ready) #vHome{display:none}
+.acct{display:flex;flex-wrap:wrap;align-items:center;gap:4px 16px;margin:-8px 0 14px;font:.95rem system-ui,sans-serif;color:var(--mute)}
+.acct .link{font-size:.95rem}
+#acctWho{overflow-wrap:anywhere}
+.authbox{max-width:460px;margin:0 auto}
 #body .reg:first-child>h3{margin-top:4px}
 .swt .ib{display:inline-flex;vertical-align:middle;margin-left:8px}
 .frs{flex:1 1 100%}
@@ -168,6 +177,24 @@ textarea.s{min-height:76px}
 <div class="wrap">
 <h1><span aria-hidden="true">🧵</span> StitchCraft</h1>
 <p class="sub">Cast measurements for every production</p>
+<div class="acct" id="acct" hidden><span id="acctWho"></span><span id="acctSync" role="status"></span><button type="button" class="link" id="acctOut">Sign Out</button></div>
+
+<div id="vAuth" class="view" hidden>
+  <section class="authbox">
+    <h2 id="authTitle" data-vf tabindex="-1">Sign In</h2>
+    <p class="hint" id="authLead" style="margin:0 0 12px"></p>
+    <form id="authForm" novalidate>
+      <div class="stack">
+        <label id="authEmailL">Email<input id="authEmail" type="email" autocomplete="email" inputmode="email" autocapitalize="off" spellcheck="false"></label>
+        <label id="authPassL">Password<input id="authPass" type="password" autocomplete="current-password"></label>
+        <label id="authPass2L" hidden>Confirm Password<input id="authPass2" type="password" autocomplete="new-password"></label>
+        <div class="bar"><button type="submit" class="btn" id="authGo">Sign In</button><button type="button" class="btn alt" id="authAlt">Create Account</button></div>
+        <button type="button" class="link" id="authForgot" style="align-self:flex-start">Forgot password?</button>
+      </div>
+    </form>
+    <p class="hint" id="authMsg" role="alert" style="color:var(--acc)"></p>
+  </section>
+</div>
 
 <div id="vHome" class="view">
   <section>
@@ -175,9 +202,9 @@ textarea.s{min-height:76px}
     <p class="hint" id="homeMsg" role="status" style="margin:0 0 8px;color:var(--acc)"></p>
     <div id="pList"></div>
     <div class="bar" style="margin-top:12px"><button type="button" class="btn" id="pNew">+ New Production</button></div>
-    <p class="hint">Saved in this browser on this device.</p>
+    <p class="hint" id="homeHint">Saved in this browser on this device.</p>
   </section>
-  <section>
+  <section id="bkSec">
     <h2>Backup</h2>
     <p class="hint" style="margin:0 0 12px">Copies every production, cast member, picture and field setting to your Supabase database. Back Up sends everything. After your first backup, changes are also sent automatically about 20 seconds after you make them. Nothing you delete here is removed from the backup. Restore brings the backup into this browser.</p>
     <label class="sw" style="max-width:420px"><span class="swt">Back up automatically</span><input type="checkbox" role="switch" class="swi" id="bkAuto" checked></label>
@@ -388,6 +415,7 @@ function titleCase(v){return String(v||"").replace(/(^|[\s\/\-(])([a-z])/g,funct
 function saveDB(){
   var ok=false;try{localStorage.setItem(KEY,JSON.stringify(db));ok=true}catch(e){}
   if(ok&&typeof bkSchedule==="function")bkSchedule();
+  if(ok&&typeof clSchedule==="function")clSchedule();
   return ok;
 }
 function blankProd(){return{id:uid(),name:"",website:"",poster:"",director:"",producers:"",stageManager:"",props:"",publicity:"",costumeTeam:"",setTeam:"",runStart:"",runEnd:"",fields:[],hidden:[]}}
@@ -418,7 +446,7 @@ function loadDB(){
 
 /* ---------- views ---------- */
 function show(v){
-  ["vHome","vProd","vCast","vFields"].forEach(function(id){$("#"+id).hidden=(id!==v)});window.scrollTo(0,0);
+  ["vHome","vProd","vCast","vFields","vAuth"].forEach(function(id){$("#"+id).hidden=(id!==v)});window.scrollTo(0,0);
   var h=$("#"+v+" [data-vf]");if(h)h.focus({preventScroll:true});
 }
 function fmtD(s){if(!s)return"";var a=s.split("-");return new Date(+a[0],+a[1]-1,+a[2]).toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric"})}
@@ -1507,13 +1535,362 @@ function bkInit(){
   }).catch(function(){bkSet("Couldn’t check for the Supabase connector. Reload the page to try again.")});
 }
 
+/* ---------- accounts and cloud data (the hosted website only) ----------
+   On the website, people sign in with Supabase Auth (email and password). Their productions and cast members are
+   kept in the app_productions / app_members tables, where row level security lets each account see only its own rows.
+   Inside Claude, or when the file is opened locally, none of this runs and the app works as before.
+   The browser keeps a copy per account for speed and for changes the network hasn't taken yet. Each record's last
+   known server content is remembered as a hash ("base"), so a sync sends only what changed here, removes what was
+   deleted here, and takes what changed elsewhere. If the same record changed in both places, this browser wins. */
+var CLOUD=document.documentElement.classList.contains("cloud")||!!window.__forceCloud;
+var CL={
+  cfg:{url:"https://fcotvvkiyfgoagsakkgi.supabase.co",key:"sb_publishable_e7zNq-2iIIu2UXvhj5OlcA_Ou-G57vA",lib:"vendor/supabase.js"},
+  client:null,user:null,mode:"wait",base:{p:{},m:{}},baseKey:"",timer:0,busy:false,delay:5000,fatal:"",recovering:false,ready:false,lastPull:0
+};
+var CL_TABLE={p:"app_productions",m:"app_members"};
+function clCanon(v){
+  if(Array.isArray(v))return "["+v.map(clCanon).join(",")+"]";
+  if(v&&typeof v==="object")return "{"+Object.keys(v).sort().map(function(k){return JSON.stringify(k)+":"+clCanon(v[k])}).join(",")+"}";
+  return JSON.stringify(typeof v==="string"?bkClean("",v):v);
+}
+function clHash(r){return bkHash(clCanon(r))}
+function clSaveBase(){try{localStorage.setItem(CL.baseKey,JSON.stringify(CL.base))}catch(e){}}
+function clLoadBase(){
+  try{var b=JSON.parse(localStorage.getItem(CL.baseKey));if(b&&b.p&&b.m)return b}catch(e){}
+  return {p:{},m:{}};
+}
+function clStatus(t){$("#acctSync").textContent=t}
+
+/* ----- sign-in screen ----- */
+var CL_MODES={
+  wait:{title:"StitchCraft",lead:"",fields:[],go:"",alt:"",forgot:false},
+  "in":{title:"Sign In",lead:"Sign in to see your productions and cast members.",fields:["Email","Pass"],go:"Sign In",alt:"Create Account",forgot:true},
+  up:{title:"Create Account",lead:"Make an account to keep your productions and cast members in one private place. They are saved to your account, so you can open them on any device.",fields:["Email","Pass","Pass2"],go:"Create Account",alt:"I Already Have An Account",forgot:false},
+  forgot:{title:"Reset Password",lead:"Enter your email and we will send you a link to choose a new password.",fields:["Email"],go:"Send Reset Link",alt:"Back To Sign In",forgot:false},
+  recover:{title:"Choose A New Password",lead:"Pick a new password for your account.",fields:["Pass","Pass2"],go:"Save Password",alt:"",forgot:false},
+  failed:{title:"Couldn\u2019t Load Your Data",lead:"",fields:[],go:"Try Again",alt:"Sign Out",forgot:false}
+};
+function clMode(mode,msg){
+  var m=CL_MODES[mode];CL.mode=mode;
+  $("#authTitle").textContent=m.title;$("#authLead").textContent=m.lead;$("#authLead").hidden=!m.lead;
+  ["Email","Pass","Pass2"].forEach(function(f){$("#auth"+f+"L").hidden=m.fields.indexOf(f)<0});
+  $("#authPass").autocomplete=(mode==="up"||mode==="recover")?"new-password":"current-password";
+  $("#authGo").hidden=!m.go;$("#authGo").textContent=m.go;
+  $("#authAlt").hidden=!m.alt;$("#authAlt").textContent=m.alt;
+  $("#authForgot").hidden=!m.forgot;
+  $("#authMsg").textContent=msg||"";
+  $("#authGo").disabled=false;$("#authAlt").disabled=false;
+  $("#authForm").style.display=mode==="wait"?"none":"";
+}
+function clShowAuth(mode,msg){
+  $("#acct").hidden=true;clMode(mode,msg);show("vAuth");
+  var f=CL_MODES[mode].fields[0];if(f)$("#auth"+f).focus();
+}
+function clAuthError(e){
+  var c=(e&&(e.code||e.error_code))||"",m=(e&&e.message)||"";
+  if(c==="invalid_credentials"||/invalid login/i.test(m))return "That email and password don\u2019t match an account. Check them and try again.";
+  if(c==="email_not_confirmed"||/not confirmed/i.test(m))return "Confirm your email first: open the link in the message we sent you, then sign in.";
+  if(c==="user_already_exists"||/already registered/i.test(m))return "That email already has an account. Sign in instead, or reset your password.";
+  if(c==="weak_password"||/at least/i.test(m))return "Choose a stronger password: at least 8 characters.";
+  if(c==="over_email_send_rate_limit"||c==="over_request_rate_limit"||/rate limit|seconds/i.test(m))return "Too many attempts. Wait a minute, then try again.";
+  if(c==="signup_disabled")return "New accounts can\u2019t be created right now.";
+  if(c==="email_address_invalid"||/invalid.*email|email.*invalid/i.test(m))return "That doesn\u2019t look like a valid email address.";
+  if(!navigator.onLine)return "You appear to be offline. Check your connection and try again.";
+  return "That didn\u2019t work. Check your details and try again.";
+}
+function clSubmit(){
+  var mode=CL.mode,email=$("#authEmail").value.trim(),pw=$("#authPass").value,pw2=$("#authPass2").value;
+  var msg=function(t){$("#authMsg").textContent=t};
+  if(mode==="failed"){clStart(CL.user);return}
+  if(mode==="wait")return;
+  if((mode==="in"||mode==="up"||mode==="forgot")&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){msg("Enter your email address.");$("#authEmail").focus();return}
+  if((mode==="in")&&!pw){msg("Enter your password.");$("#authPass").focus();return}
+  if(mode==="up"||mode==="recover"){
+    if(pw.length<8){msg("Use at least 8 characters for your password.");$("#authPass").focus();return}
+    if(pw!==pw2){msg("The two passwords don\u2019t match.");$("#authPass2").focus();return}
+  }
+  var go=$("#authGo"),alt=$("#authAlt");go.disabled=true;alt.disabled=true;msg("");
+  var back=function(){go.disabled=false;alt.disabled=false};
+  var A=CL.client.auth,here=location.origin+location.pathname;
+  if(mode==="in"){
+    A.signInWithPassword({email:email,password:pw}).then(function(r){
+      if(r.error){msg(clAuthError(r.error));back();return}
+      msg("Signing in\u2026");   /* the sign-in event takes it from here */
+    }).catch(function(e){msg(clAuthError(e));back()});
+  }else if(mode==="up"){
+    A.signUp({email:email,password:pw,options:{emailRedirectTo:here}}).then(function(r){
+      if(r.error){msg(clAuthError(r.error));back();return}
+      if(r.data&&r.data.session){msg("Account created. Signing in\u2026");return}
+      var existing=r.data&&r.data.user&&r.data.user.identities&&r.data.user.identities.length===0;
+      clMode("in",existing?"That email may already have an account. Sign in, or choose Forgot password.":"Check your email: we sent a link to confirm your account. Open it, then sign in here.");
+      $("#authEmail").value=email;$("#authPass").value="";
+    }).catch(function(e){msg(clAuthError(e));back()});
+  }else if(mode==="forgot"){
+    A.resetPasswordForEmail(email,{redirectTo:here}).then(function(r){
+      if(r.error){msg(clAuthError(r.error));back();return}
+      clMode("in","If that email has an account, we sent a link to reset the password. Open it to choose a new one.");
+      $("#authEmail").value=email;
+    }).catch(function(e){msg(clAuthError(e));back()});
+  }else if(mode==="recover"){
+    A.updateUser({password:pw}).then(function(r){
+      if(r.error){msg(clAuthError(r.error));back();return}
+      CL.recovering=false;$("#authPass").value="";$("#authPass2").value="";
+      try{history.replaceState(null,"",location.pathname)}catch(e){}
+      A.getSession().then(function(g){var u=g&&g.data&&g.data.session&&g.data.session.user;if(u)clStart(u);else clShowAuth("in","Password updated. Sign in with your new password.")});
+    }).catch(function(e){msg(clAuthError(e));back()});
+  }
+}
+$("#authForm").addEventListener("submit",function(e){e.preventDefault();clSubmit()});
+$("#authAlt").onclick=function(){
+  var m=CL.mode;
+  if(m==="failed"){clSignOut(true);return}
+  clMode(m==="in"?"up":"in");var f=$("#authEmail");f.focus();
+};
+$("#authForgot").onclick=function(){clMode("forgot");$("#authEmail").focus()};
+
+/* ----- loading and merging the account's data ----- */
+function clCheck(r){if(r&&r.error){var e=r.error;e.status=r.status;throw e}return r}
+function clFetch(table){
+  var out=[],page=40;
+  function next(from){
+    return CL.client.from(table).select("id,data").order("id").range(from,from+page-1).then(function(r){
+      clCheck(r);
+      var rows=r.data||[];
+      rows.forEach(function(x){if(x&&x.data&&typeof x.data==="object"){x.data.id=x.id;out.push(x.data)}});
+      return rows.length===page?next(from+page):out;
+    });
+  }
+  return next(0);
+}
+/* three-way merge of one kind of record: server copy, this browser's copy, and the remembered last-synced hash */
+function clMergeKind(server,local,base){
+  var sm={},lm={},ids={},out=[],nb={};
+  server.forEach(function(r){sm[r.id]=r;ids[r.id]=1});
+  local.forEach(function(r){if(r&&typeof r.id==="string"){lm[r.id]=r;ids[r.id]=1}});
+  Object.keys(ids).forEach(function(id){
+    var s=sm[id],l=lm[id],b=base[id];
+    if(s&&l){
+      if(clHash(l)===b){out.push(s);nb[id]=clHash(s)}          /* unchanged here: take the account's copy */
+      else{out.push(l);if(b)nb[id]=b}                           /* changed here: keep it, it will be sent */
+    }else if(s){
+      if(b)nb[id]=b;                                            /* deleted here, not yet removed from the account */
+      else{out.push(s);nb[id]=clHash(s)}                        /* new from another device */
+    }else if(l){
+      if(b&&clHash(l)===b){/* removed on another device: drop it here too */}
+      else{out.push(l);if(b)nb[id]=b}                           /* new or changed here: keep, it will be sent */
+    }
+  });
+  return {list:out,base:nb};
+}
+function clApply(P,M){
+  P=P.map(bkCleanProd).filter(Boolean);M=M.map(bkCleanMember).filter(Boolean);
+  var mp=clMergeKind(P,db.productions,CL.base.p),mm=clMergeKind(M,db.members,CL.base.m);
+  var have={};mp.list.forEach(function(p){have[p.id]=1});
+  db.productions=mp.list;
+  db.members=mm.list.filter(function(m){return have[m.productionId]});
+  CL.base.p=mp.base;CL.base.m=mm.base;clSaveBase();
+}
+function clOfferLegacy(){
+  var raw=null,flag="stitchcraft-imported-"+CL.user.id;
+  try{raw=localStorage.getItem("stitchcraft-v2");if(!raw||localStorage.getItem(flag))return Promise.resolve()}catch(e){return Promise.resolve()}
+  var old=null;try{old=JSON.parse(raw)}catch(e){}
+  var done=function(){try{localStorage.setItem(flag,"1")}catch(e){}};
+  if(!old||!Array.isArray(old.productions)){done();return Promise.resolve()}
+  var have={};db.productions.forEach(function(p){have[p.id]=1});
+  var haveM={};db.members.forEach(function(m){haveM[m.id]=1});
+  var ps=old.productions.map(bkCleanProd).filter(function(p){return p&&!have[p.id]});
+  var keep={};ps.forEach(function(p){keep[p.id]=1});
+  var allP={};old.productions.forEach(function(p){if(p&&p.id)allP[p.id]=1});
+  var ms=(Array.isArray(old.members)?old.members:[]).map(bkCleanMember).filter(function(m){return m&&!haveM[m.id]&&(keep[m.productionId]||have[m.productionId])});
+  if(!ps.length&&!ms.length){done();return Promise.resolve()}
+  return ask("This browser has "+ps.length+" production"+(ps.length===1?"":"s")+" and "+ms.length+" cast member"+(ms.length===1?"":"s")+" saved without an account. Add them to your account? The copy in this browser is left as it is.","Add To My Account").then(function(ok){
+    done();
+    if(!ok)return;
+    ps.forEach(function(p){db.productions.push(p)});ms.forEach(function(m){db.members.push(m)});
+    saveDB();
+  });
+}
+function clStart(user){
+  if(!user)return Promise.resolve();
+  CL.user=user;CL.fatal="";CL.ready=false;
+  KEY="stitchcraft-v2-u-"+user.id;CL.baseKey="stitchcraft-cloud-base-"+user.id;
+  /* if this browser's copy is gone, what it last synced is meaningless: start from the account's data, and never
+     read a missing copy as "everything was deleted" */
+  var haveCache=false;try{haveCache=localStorage.getItem(KEY)!==null}catch(e){}
+  db={productions:[],members:[]};loadDB();CL.base=haveCache?clLoadBase():{p:{},m:{}};
+  clMode("wait","Loading your productions\u2026");show("vAuth");$("#authForm").style.display="none";
+  return Promise.all([clFetch(CL_TABLE.p),clFetch(CL_TABLE.m)]).then(function(r){
+    clApply(r[0],r[1]);CL.lastPull=Date.now();
+    return clOfferLegacy();
+  }).then(function(){
+    CL.ready=true;saveDB();
+    $("#acctWho").textContent="Signed in as "+(user.email||"your account");
+    $("#acct").hidden=false;$("#homeHint").textContent="Saved to your account. Only you can see it.";
+    clStatus("Saved");renderHome();show("vHome");
+    clFlush();
+  }).catch(function(e){
+    var i=clErrInfo(e);
+    if(i.auth){clUnexpectedOut();return}
+    clShowAuth("failed","We couldn\u2019t load your productions. Check your connection and try again.");
+  });
+}
+
+/* ----- sending changes ----- */
+function clPlan(){
+  var up={p:[],m:[]},del={p:[],m:[]};
+  [["p",db.productions],["m",db.members]].forEach(function(pair){
+    var k=pair[0],seen={};
+    pair[1].forEach(function(r){
+      if(!r||typeof r.id!=="string"||!r.id)return;
+      seen[r.id]=1;
+      if(k==="m"&&typeof r.productionId!=="string")return;
+      var h=clHash(r);if(CL.base[k][r.id]!==h)up[k].push({rec:r,hash:h});
+    });
+    Object.keys(CL.base[k]).forEach(function(id){if(!seen[id])del[k].push(id)});
+  });
+  return {up:up,del:del,empty:!(up.p.length||up.m.length||del.p.length||del.m.length)};
+}
+function clPending(){return !!CL.user&&CL.ready&&!clPlan().empty}
+function clErrInfo(e){
+  var c=(e&&(e.code||""))+"",m=(e&&e.message)||"",st=e&&e.status;
+  if(c==="54000")return {fatal:true,text:"Your account has reached its storage limit, so the newest changes can\u2019t be saved."};
+  if(c==="23514")return {fatal:true,text:"One record is too large to save to your account."};
+  if(st===401||st===403||c==="PGRST301"||c==="PGRST303"||/jwt|not authenticated/i.test(m))return {auth:true,text:"Your session ended."};
+  return {text:"Can\u2019t reach your account right now. Your changes are kept here and will be saved when it works."};
+}
+function clSchedule(){
+  if(!CL||!CL.user||!CL.ready||CL.fatal)return;
+  clearTimeout(CL.timer);clStatus("Saving\u2026");CL.timer=setTimeout(clTick,2000);
+}
+var CL_BATCH=700000;
+function clUpsert(k,items,uploaded){
+  if(!items.length)return Promise.resolve();
+  var enc=new TextEncoder(),batches=[],cur=[],bytes=0,now=new Date().toISOString();
+  items.forEach(function(it){
+    var row={user_id:CL.user.id,id:it.rec.id,data:JSON.parse(JSON.stringify(it.rec,bkClean)),updated_at:now};
+    if(k==="m")row.production_id=it.rec.productionId;
+    var size=enc.encode(JSON.stringify(row)).length;
+    if(cur.length&&(bytes+size>CL_BATCH||cur.length>=40)){batches.push(cur);cur=[];bytes=0}
+    cur.push({row:row,id:it.rec.id,hash:it.hash});bytes+=size;
+  });
+  if(cur.length)batches.push(cur);
+  var chain=Promise.resolve();
+  batches.forEach(function(b){
+    chain=chain.then(function(){
+      return CL.client.from(CL_TABLE[k]).upsert(b.map(function(x){return x.row}),{onConflict:"user_id,id"});
+    }).then(function(r){clCheck(r);b.forEach(function(x){CL.base[k][x.id]=x.hash});clSaveBase();uploaded.n+=b.length});
+  });
+  return chain;
+}
+function clDelete(k,ids){
+  var chain=Promise.resolve();
+  for(var i=0;i<ids.length;i+=50)(function(part){
+    chain=chain.then(function(){return CL.client.from(CL_TABLE[k]).delete().eq("user_id",CL.user.id).in("id",part)}).then(function(r){clCheck(r);part.forEach(function(id){delete CL.base[k][id]});clSaveBase()});
+  })(ids.slice(i,i+50));
+  return chain;
+}
+function clTick(){CL.timer=0;clFlush()}
+function clFlush(){
+  clearTimeout(CL.timer);CL.timer=0;
+  if(!CL.user||!CL.ready||CL.busy)return Promise.resolve();
+  var plan=clPlan();
+  if(plan.empty){clStatus(CL.fatal||"Saved");return Promise.resolve()}
+  CL.busy=true;clStatus("Saving\u2026");var up={n:0};
+  return clUpsert("p",plan.up.p,up).then(function(){return clUpsert("m",plan.up.m,up)})
+    .then(function(){return clDelete("p",plan.del.p)}).then(function(){return clDelete("m",plan.del.m)})
+    .then(function(){CL.delay=5000;CL.fatal="";clStatus("Saved")})
+    .catch(function(e){
+      var i=clErrInfo(e);
+      if(i.auth){return CL.client.auth.refreshSession().then(function(r){if(r&&r.error||!r.data||!r.data.session)throw r&&r.error||{};clStatus("Saving\u2026");CL.timer=setTimeout(clTick,500)}).catch(function(){clUnexpectedOut()})}
+      if(i.fatal){CL.fatal=i.text;clStatus(i.text);return}
+      clStatus(i.text);CL.delay=Math.min(CL.delay*2,300000);CL.timer=setTimeout(clTick,CL.delay);
+    })
+    .then(function(){CL.busy=false;if(CL.user&&!CL.fatal&&!CL.timer&&clPending()){CL.timer=setTimeout(clTick,500)}});
+}
+/* when the page is hidden or closed, send what is waiting straight away; and warn if some of it hasn't gone */
+document.addEventListener("visibilitychange",function(){
+  if(!CL.user)return;
+  if(document.hidden){clFlush();return}
+  /* coming back to the tab: pick up changes made on another device, but only from the home screen so nothing in use is disturbed */
+  if(!$("#vHome").hidden&&!CL.busy&&!CL.timer&&Date.now()-CL.lastPull>60000&&!clPending()){
+    CL.lastPull=Date.now();
+    Promise.all([clFetch(CL_TABLE.p),clFetch(CL_TABLE.m)]).then(function(r){clApply(r[0],r[1]);saveDB();if(!$("#vHome").hidden)renderHome()}).catch(function(){});
+  }
+});
+window.addEventListener("pagehide",function(){if(CL.user)clFlush()});
+window.addEventListener("beforeunload",function(e){if(CL.user&&clPending()){e.preventDefault();e.returnValue=""}});
+
+/* ----- signing out ----- */
+function clWipe(){
+  try{localStorage.removeItem(KEY);localStorage.removeItem(CL.baseKey)}catch(e){}
+}
+function clReset(){
+  clearTimeout(CL.timer);CL.timer=0;CL.user=null;CL.ready=false;CL.busy=false;CL.fatal="";CL.base={p:{},m:{}};
+  db={productions:[],members:[]};curProd=null;KEY="stitchcraft-v2-u-none";
+  $("#acct").hidden=true;$("#acctWho").textContent="";clStatus("");
+  $("#authEmail").value="";$("#authPass").value="";$("#authPass2").value="";
+}
+/* the session ended without the person asking (it expired, or was revoked): keep their unsent changes in this browser */
+function clUnexpectedOut(){
+  clReset();clShowAuth("in","Your session ended. Sign in again to continue.");
+}
+function clSignOut(skipCheck){
+  var btn=$("#acctOut");btn.disabled=true;
+  var go=function(){
+    return CL.client.auth.signOut().then(function(){clWipe();clReset();clShowAuth("in","You are signed out.")}).catch(function(){clShowAuth("in","")});
+  };
+  var p=skipCheck?Promise.resolve(true):clFlush().then(function(){
+    if(!clPending())return true;
+    return ask("Some changes haven\u2019t reached your account yet. Sign out anyway and lose them?","Sign Out Anyway");
+  });
+  return p.then(function(ok){if(ok)return go()}).then(function(){btn.disabled=false});
+}
+$("#acctOut").onclick=function(){clSignOut(false)};
+
+/* ----- start-up ----- */
+function clAuthEvent(ev,session){
+  var u=session&&session.user;
+  if(ev==="PASSWORD_RECOVERY"){CL.recovering=true;clShowAuth("recover");return}
+  if(CL.recovering)return;
+  if((ev==="INITIAL_SESSION"||ev==="SIGNED_IN")&&u){
+    if(CL.user&&CL.user.id===u.id)return;                        /* the same session confirming itself */
+    try{if(/access_token|refresh_token|type=/.test(location.hash))history.replaceState(null,"",location.pathname+location.search)}catch(e){}
+    clStart(u);return;
+  }
+  if(ev==="INITIAL_SESSION"&&!u){if(!CL.user)clShowAuth("in","");return}
+  if(ev==="SIGNED_OUT"&&CL.user){clUnexpectedOut()}
+}
+function clLoadLib(){
+  return new Promise(function(res,rej){
+    if(window.supabase&&window.supabase.createClient)return res();
+    var s=document.createElement("script");s.src=CL.cfg.lib;
+    s.onload=function(){window.supabase&&window.supabase.createClient?res():rej(new Error("lib"))};
+    s.onerror=function(){rej(new Error("load"))};
+    document.head.appendChild(s);
+  });
+}
+function clBoot(){
+  document.documentElement.classList.add("cloud-ready");
+  $("#bkSec").hidden=true;
+  clMode("wait","");show("vAuth");$("#authForm").style.display="none";$("#authLead").hidden=false;$("#authLead").textContent="Loading\u2026";
+  clLoadLib().then(function(){
+    CL.client=window.supabase.createClient(CL.cfg.url,CL.cfg.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+    CL.client.auth.onAuthStateChange(function(ev,session){setTimeout(function(){clAuthEvent(ev,session)},0)});
+    return CL.client.auth.getSession().then(function(r){
+      var s=r&&r.data&&r.data.session;
+      setTimeout(function(){if(!CL.user&&!CL.recovering&&CL.mode==="wait")clAuthEvent("INITIAL_SESSION",s)},300);
+    });
+  }).catch(function(){clMode("in","The sign-in couldn\u2019t load. Check your connection and reload the page.");$("#authGo").disabled=true;$("#authAlt").disabled=true;$("#authForm").style.display="";show("vAuth")});
+}
+
 /* start */
-loadDB();
+if(!CLOUD)loadDB();
 wrapLabels();
 buildFieldMap();
-bkInit();
+if(!CLOUD)bkInit();
 setUnit("in",false);
 renderHome();
+if(CLOUD)clBoot();
 })();
 </script>
 </body>

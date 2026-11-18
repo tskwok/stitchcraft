@@ -1285,7 +1285,7 @@ function bkSaveState(st){try{localStorage.setItem(BK_STATE_KEY,JSON.stringify(st
 function bkHash(str){var h=2166136261;for(var i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619)}return (h>>>0).toString(36)+":"+str.length}
 /* strings go into jsonb, which refuses NUL and lone surrogates, so tidy those first */
 function bkClean(k,v){
-  return typeof v==="string"?v.replace(/\u0000/g,"").replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g,"�"):v;
+  return typeof v==="string"?v.replace(/\u0000/g,"").replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g,"\uFFFD"):v;
 }
 /* dollar-quote a string with a tag that the text cannot contain, so no stored text can end the quote early */
 function bkQuote(text){

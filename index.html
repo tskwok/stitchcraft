@@ -155,6 +155,7 @@ textarea.s{min-height:76px}
 .swi:checked::after{transform:translateX(20px);background:var(--acc-ink)}
 .swi:disabled{opacity:.55;cursor:default}
 .fgb{margin:0 0 6px}
+.swt .ib{display:inline-flex;vertical-align:middle;margin-left:8px}
 .frs{flex:1 1 100%}
 .fr .sw{border-bottom:0;min-height:40px;padding:0}
 @media (prefers-reduced-motion:reduce){.swi::after{transition:none}}
@@ -1157,7 +1158,8 @@ function buildFieldMap(){
       var photo=el.closest(".photo"),box=photo||el.closest("label,.lab");if(!box)return;
       var lt=box.querySelector(".lt");
       var label=photo?"Profile Picture":(lt?lt.textContent:box.textContent).replace(/\s*\([^)]*\)\s*$/,"").replace(/\s+/g," ").trim();
-      FMAP.push({k:k,label:label,group:group,box:box,calc:!!el.readOnly,locked:k==="name"});
+      var ib=box.querySelector(".ib");
+      FMAP.push({k:k,label:label,group:group,box:box,calc:!!el.readOnly,locked:k==="name",g:ib?ib.dataset.g:null,gl:ib?ib.getAttribute("aria-label"):""});
     });
   });
 }
@@ -1173,8 +1175,8 @@ function applyFieldVisibility(){
     sec.hidden=!any;
   });
 }
-function swHtml(attr,key,label,on,note,locked){
-  return '<label class="sw"><span class="swt">'+esc(label)+(note?'<i>'+esc(note)+'</i>':'')+'</span><input type="checkbox" role="switch" class="swi" '+attr+'="'+esc(key)+'"'+(on?' checked':'')+(locked?' disabled':'')+'></label>';
+function swHtml(attr,key,label,on,note,locked,ib){
+  return '<label class="sw"><span class="swt">'+esc(label)+(ib||"")+(note?'<i>'+esc(note)+'</i>':'')+'</span><input type="checkbox" role="switch" class="swi" '+attr+'="'+esc(key)+'"'+(on?' checked':'')+(locked?' disabled':'')+'></label>';
 }
 function gBtns(name,prod){
   var d=prod?' data-gp="1"':'',nm=esc(name);
@@ -1186,7 +1188,7 @@ function renderFieldsPage(){
   FMAP.forEach(function(f){if(!by[f.group]){by[f.group]=[];groups.push(f.group)}by[f.group].push(f)});
   var h=groups.map(function(g){
     return '<section><h2>'+esc(g)+'</h2><div class="bar fgb">'+gBtns(g,false)+'</div><div class="tg">'+by[g].map(function(f){
-      return swHtml("data-ff",f.k,f.label,f.locked||hid.indexOf(f.k)<0,f.locked?"Always shown":(f.calc?"Calculated":""),f.locked);
+      return swHtml("data-ff",f.k,f.label,f.locked||hid.indexOf(f.k)<0,f.locked?"Always shown":(f.calc?"Calculated":""),f.locked,f.g!=null?'<button type="button" class="ib" data-g="'+esc(f.g)+'" aria-label="'+esc(f.gl)+'">i</button>':"");
     }).join("")+'</div></section>';
   }).join("");
   $("#fgList").innerHTML=h;

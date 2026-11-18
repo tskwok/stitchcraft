@@ -144,6 +144,18 @@ textarea.s{min-height:76px}
 .mrow input{flex:1;min-width:0}
 .madd{align-self:flex-start}
 .stack{display:flex;flex-direction:column;gap:12px;min-width:0}
+/* cast page fields: switch rows */
+.tg{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr));gap:0 24px}
+.sw{flex-direction:row;justify-content:space-between;align-items:center;gap:12px;min-height:46px;padding:4px 0;border-bottom:1px solid var(--line);font:1rem system-ui,sans-serif;color:var(--ink);cursor:pointer}
+.swt{min-width:0;overflow-wrap:anywhere}
+.swt i{display:block;font:italic .85rem system-ui,sans-serif;color:var(--mute)}
+.swi{-webkit-appearance:none;appearance:none;flex:none;width:48px;height:28px;padding:0;border-radius:999px;border:1px solid var(--acc);background:var(--soft);position:relative;cursor:pointer}
+.swi::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:var(--acc);transition:transform .15s}
+.swi:checked{background:var(--acc)}
+.swi:checked::after{transform:translateX(20px);background:var(--acc-ink)}
+.swi:disabled{opacity:.55;cursor:default}
+.fgb{margin:0 0 6px}
+@media (prefers-reduced-motion:reduce){.swi::after{transition:none}}
 </style>
 </head>
 <body>
@@ -207,12 +219,22 @@ textarea.s{min-height:76px}
   <section>
     <h2>Cast Members</h2>
     <div id="list"></div>
-    <div class="bar" style="margin-top:12px"><button type="button" class="btn" id="cNew">+ Add Cast Member</button></div>
+    <div class="bar" style="margin-top:12px"><button type="button" class="btn" id="cNew">+ Add Cast Member</button><button type="button" class="btn alt" id="cFields">Choose Cast Page Fields</button></div>
   </section>
 
   <div class="bar"><button type="button" class="btn alt" id="pExp">Export Production</button><button type="button" class="btn" id="pImp">Import Production</button><button type="button" class="btn alt danger" id="pDel">Delete Production</button></div>
   <input type="file" id="impFile" accept=".json,application/json" style="display:none">
   <p class="hint" id="ioMsg" role="status" style="color:var(--acc)"></p>
+</div>
+
+<div id="vFields" class="view" hidden>
+  <div class="crumb"><button type="button" class="link" id="bFProd">← Back to production</button></div>
+  <section>
+    <h2 data-vf tabindex="-1">Cast Page Fields</h2>
+    <p class="hint" style="margin:0 0 4px">Choose which fields appear on cast members' pages for this production. A field that is turned off is hidden on the page and left off printouts and PDFs. Anything already entered is kept, and it comes back if you turn the field on again.</p>
+    <p class="hint" id="fgMsg" role="status" style="color:var(--acc)"></p>
+  </section>
+  <div id="fgList"></div>
 </div>
 
 <div id="vCast" class="view" hidden>
@@ -349,9 +371,10 @@ function titleCase(v){return String(v||"").replace(/(^|[\s\/\-(])([a-z])/g,funct
 
 /* ---------- storage ---------- */
 function saveDB(){try{localStorage.setItem(KEY,JSON.stringify(db));return true}catch(e){return false}}
-function blankProd(){return{id:uid(),name:"",website:"",poster:"",director:"",producers:"",stageManager:"",props:"",publicity:"",costumeTeam:"",setTeam:"",runStart:"",runEnd:"",fields:[]}}
+function blankProd(){return{id:uid(),name:"",website:"",poster:"",director:"",producers:"",stageManager:"",props:"",publicity:"",costumeTeam:"",setTeam:"",runStart:"",runEnd:"",fields:[],hidden:[]}}
 function toStr(v){return Array.isArray(v)?v.filter(function(x){return (x||"").trim()}).join("\n"):(v||"")}
 function normProd(p){
+  if(!Array.isArray(p.hidden))p.hidden=[];
   p.stageManager=toStr(p.stageManager);p.publicity=toStr(p.publicity);
   if(p.assistantStageManager){p.stageManager=(p.stageManager?p.stageManager+"\n":"")+toStr(p.assistantStageManager)}
   if(p.publicityAssistant){p.publicity=(p.publicity?p.publicity+"\n":"")+toStr(p.publicityAssistant)}
@@ -376,7 +399,7 @@ function loadDB(){
 
 /* ---------- views ---------- */
 function show(v){
-  ["vHome","vProd","vCast"].forEach(function(id){$("#"+id).hidden=(id!==v)});window.scrollTo(0,0);
+  ["vHome","vProd","vCast","vFields"].forEach(function(id){$("#"+id).hidden=(id!==v)});window.scrollTo(0,0);
   var h=$("#"+v+" [data-vf]");if(h)h.focus({preventScroll:true});
 }
 function fmtD(s){if(!s)return"";var a=s.split("-");return new Date(+a[0],+a[1]-1,+a[2]).toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric"})}
@@ -523,11 +546,13 @@ function importData(d){
     if(!/^\d{4}-\d{2}-\d{2}$/.test(p.runStart))p.runStart="";
     if(!/^\d{4}-\d{2}-\d{2}$/.test(p.runEnd)||(p.runStart&&p.runEnd<p.runStart))p.runEnd="";
     p.poster=impImg(src.poster);
+    p.hidden=(Array.isArray(src.hidden)?src.hidden:[]).filter(function(k){return typeof k==="string"&&FMAP.some(function(f){return f.k===k&&!f.locked})});
     var nm=p.name||"Untitled production";
     if(db.productions.some(function(x){return (x.name||"Untitled production")===nm}))p.name=nm+" (Imported)";
     (Array.isArray(src.fields)?src.fields:[]).forEach(function(f){
       if(!f||typeof f!=="object")return;
       var nf={id:uid(),name:titleCase(impStr(f.name).trim()),type:types.indexOf(f.type)>-1?f.type:"text",options:(Array.isArray(f.options)?f.options:[]).map(impStr).filter(Boolean),note:impStr(f.note)};
+      if(f.off===true)nf.off=true;
       fmap[f.id]=nf.id;p.fields.push(nf);
     });
     db.productions.push(p);added.push(p);
@@ -866,9 +891,12 @@ $("#gF").onclick=function(){gSel="F";renderGuide()};
 $("#gM").onclick=function(){gSel="M";renderGuide()};
 
 /* Production Specific Measurements on the cast form */
-function renderCustom(){
+function renderCustom(){renderCustomInner();applyFieldVisibility()}
+function renderCustomInner(){
   var l=$("#cList");if(!curProd){l.innerHTML="";return}
-  var fs=curProd.fields.filter(function(f){return (f.name||"").trim()});
+  var named=curProd.fields.filter(function(f){return (f.name||"").trim()});
+  var fs=named.filter(function(f){return !f.off});
+  if(!fs.length&&named.length){l.innerHTML="";return}
   if(!fs.length){l.innerHTML='<p class="hint">This production has no extra measurements. You can add them on the production page.</p>';return}
   l.innerHTML='<div class="cpgrid">'+fs.map(function(p){
     var c=castVals[p.id]||(castVals[p.id]={value:"",comment:"",showC:false});
@@ -1104,9 +1132,92 @@ $("#pdf").onclick=function(){
 };
 
 
+/* ---------- cast page fields: which fields show on cast members' pages (set per production) ---------- */
+/* The list is read from the cast form itself, so a field added to the form later shows up here with no extra code. */
+var FMAP=[];
+function buildFieldMap(){
+  var seen={};FMAP=[];
+  $$("#vCast section").forEach(function(sec){
+    var h=sec.querySelector("h2");if(!h)return;
+    var group=h.textContent.trim();
+    [].forEach.call(sec.querySelectorAll("[data-k]"),function(el){
+      var k=el.dataset.k;if(seen[k])return;seen[k]=1;
+      var photo=el.closest(".photo"),box=photo||el.closest("label,.lab");if(!box)return;
+      var lt=box.querySelector(".lt");
+      var label=photo?"Profile Picture":(lt?lt.textContent:box.textContent).replace(/\s*\([^)]*\)\s*$/,"").replace(/\s+/g," ").trim();
+      FMAP.push({k:k,label:label,group:group,box:box,calc:!!el.readOnly,locked:k==="name"});
+    });
+  });
+}
+function shownIn(el,root){for(var n=el;n&&n!==root;n=n.parentElement)if(n.hidden)return false;return true}
+function applyFieldVisibility(){
+  var hid=(curProd&&curProd.hidden)||[];
+  FMAP.forEach(function(f){f.box.hidden=!f.locked&&hid.indexOf(f.k)>-1});
+  /* a row or a whole section with nothing left to show disappears too */
+  $$("#vCast .grid").forEach(function(g){g.hidden=[].every.call(g.children,function(c){return c.hidden})});
+  $$("#vCast section").forEach(function(sec){
+    if(!sec.querySelector("h2"))return;
+    var any=[].some.call(sec.querySelectorAll("[data-k]"),function(el){return shownIn(el,sec)})||!!sec.querySelector(".cp,#cList .hint");
+    sec.hidden=!any;
+  });
+}
+function swHtml(attr,key,label,on,note,locked){
+  return '<label class="sw"><span class="swt">'+esc(label)+(note?'<i>'+esc(note)+'</i>':'')+'</span><input type="checkbox" role="switch" class="swi" '+attr+'="'+esc(key)+'"'+(on?' checked':'')+(locked?' disabled':'')+'></label>';
+}
+function gBtns(name,prod){
+  var d=prod?' data-gp="1"':'',nm=esc(name);
+  return '<button type="button" class="cpb" data-fg="on" data-gname="'+nm+'"'+d+' aria-label="Show all '+nm+' fields">Show All</button><button type="button" class="cpb" data-fg="off" data-gname="'+nm+'"'+d+' aria-label="Hide all '+nm+' fields">Hide All</button>';
+}
+function renderFieldsPage(){
+  if(!curProd)return;
+  var hid=curProd.hidden,groups=[],by={};
+  FMAP.forEach(function(f){if(!by[f.group]){by[f.group]=[];groups.push(f.group)}by[f.group].push(f)});
+  var h=groups.map(function(g){
+    return '<section><h2>'+esc(g)+'</h2><div class="bar fgb">'+gBtns(g,false)+'</div><div class="tg">'+by[g].map(function(f){
+      return swHtml("data-ff",f.k,f.label,f.locked||hid.indexOf(f.k)<0,f.locked?"Always shown":(f.calc?"Calculated":""),f.locked);
+    }).join("")+'</div></section>';
+  }).join("");
+  /* the production's own measurements are tacked on at the end */
+  var named=curProd.fields.filter(function(f){return (f.name||"").trim()});
+  h+='<section><h2>Production Specific Measurements</h2>';
+  if(!named.length)h+='<p class="hint" style="margin:0">This production has no extra measurements yet. Add them on the production page and they will be listed here.</p>';
+  else h+='<div class="bar fgb">'+gBtns("Production Specific Measurements",true)+'</div><div class="tg">'+named.map(function(f){return swHtml("data-fc",f.id,f.name,!f.off,"",false)}).join("")+'</div>';
+  $("#fgList").innerHTML=h+'</section>';
+}
+$("#fgList").addEventListener("change",function(e){
+  var t=e.target;if(!curProd||t.type!=="checkbox")return;
+  if(t.dataset.ff){
+    var k=t.dataset.ff,i=curProd.hidden.indexOf(k);
+    if(t.checked&&i>-1)curProd.hidden.splice(i,1);
+    if(!t.checked&&i<0)curProd.hidden.push(k);
+  }else if(t.dataset.fc){
+    var f=curProd.fields.filter(function(x){return x.id===t.dataset.fc})[0];
+    if(f){if(t.checked)delete f.off;else f.off=true}
+  }
+  saveDB();
+});
+$("#fgList").addEventListener("click",function(e){
+  var b=e.target.closest&&e.target.closest("[data-fg]");if(!b||!curProd)return;
+  var on=b.dataset.fg==="on",name=b.dataset.gname;
+  if(b.dataset.gp)curProd.fields.forEach(function(f){if(on)delete f.off;else f.off=true});
+  else FMAP.forEach(function(f){
+    if(f.group!==name||f.locked)return;
+    var i=curProd.hidden.indexOf(f.k);
+    if(on&&i>-1)curProd.hidden.splice(i,1);
+    if(!on&&i<0)curProd.hidden.push(f.k);
+  });
+  saveDB();renderFieldsPage();
+  $("#fgMsg").textContent=on?"Showing every "+name+" field.":"Hiding every "+name+" field"+(name==="General Information"?" except Name.":".");
+  var again=$$("#fgList [data-fg]").filter(function(x){return x.dataset.fg===b.dataset.fg&&x.dataset.gname===b.dataset.gname})[0];
+  if(again)again.focus();
+});
+$("#cFields").onclick=function(){if(!curProd)return;$("#fgMsg").textContent="";renderFieldsPage();show("vFields")};
+$("#bFProd").onclick=function(){renderCast();show("vProd")};
+
 /* start */
 loadDB();
 wrapLabels();
+buildFieldMap();
 setUnit("in",false);
 renderHome();
 })();
